@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>SRFI 199: POSIX errno manipulation</title>
+    <link href="favicon.png" rel="icon" sizes="192x192" type="image/png">
+    <link rel="stylesheet" href="/srfi.css" type="text/css">
+    <meta name="viewport" content="width=device-width, initial-scale=1"></head>
+  <body>
+    <h1><a href="https://srfi.schemers.org/"><img class="srfi-logo" src="https://srfi.schemers.org/srfi-logo.svg" alt="SRFI logo" /></a>199: POSIX errno manipulation</h1>
+
+<p>by Harold Ancell</p>
+
+
+<h2>Status</h2>
+
+<p>This SRFI is currently in <em>draft</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+199+at+srfi+dotschemers+dot+org">srfi-199@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-199">archive</a>.</p>
+<ul>
+  <li>Received: 2020-06-25</li>
+  <li>Draft #1 published: 2020-06-25</li>
+  <li>Withdrawn: 2020-07-19</li>
+</ul>
+
+<p>author's summary of reasons for withdrawal: As thoroughly discussed
+  on the mailing list, a simple Scheme level API like the one proposed
+  is unsatisfactory because a Scheme implementation can run arbitrary
+  code that might set errno between any of 1) manually setting it, 2)
+  a POSIX call possibly setting it, and 3) retrieving its value.
+  This, along with EINTR loops (see the Worse is Better essay) need to
+  be done at a low level, and no one has been able to come up with a
+  suitable standard and universal high level API for any of this.</p>
+
+<h2>Abstract</h2>
+
+<p>The majority of P<small>OSIX</small> system and library calls
+  require accessing <code>errno</code> to discern the specific cause
+  of an error, and some require setting it to 0 before being called.
+  This SRFI specifies procedures to both retrieve its value, and to
+  set it.
+</p>
+
+
+<h2>Rationale</h2>
+
+<p>The <a href="https://pubs.opengroup.org/onlinepubs/9699919799/functions/errno.html">P<small>OSIX</small> lvalue <code>errno</code></a> is
+  implemented as "a macro or an identifier declared with external
+  linkage".  It does not fit into the paradigm of
+
+  many
+
+  autogenerating FFIs such as Chibi Scheme's, and for the latter must
+  be hand coded.  Its value is required when using SRFI 198
+  <em>P<small>OSIX</small> system call exceptions</em>, which does not
+  provide a procedure to get its value.  This SRFI will allow many
+  implementers of P<small>OSIX</small> interfaces to focus on their
+  particular system or library calls of interest without also
+  providing these <code>errno</code> procedures or importing them
+  from another more general library.
+<p>
+
+
+<h2>Specification</h2>
+
+<dl>
+<dt><code>(errno)</code> &nbsp;&nbsp;&nbsp;&rarr; &nbsp;&nbsp;&nbsp;<i>exact integer</i> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(procedure)</dt>
+<dd>
+<p>Returns the current value of <code>errno</code>.
+</p>
+<table><tr><td>&nbsp;</td><td><pre class="example">(errno) &rArr; 2
+</pre></td></tr></table>
+</dd>
+</dl>
+
+<dl>
+<dt> <code>(set-errno! <i>errno</i>)</code> &nbsp;&nbsp;&nbsp;&rarr; &nbsp;&nbsp;&nbsp;<i>undefined</i> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(procedure)</dt>
+<dd>
+<p>Sets the current value of <code>errno</code>, where the argument <code><i>errno</i></code> is an exact integer.
+</p>
+<table><tr><td>&nbsp;</td><td><pre class="example">(errno) &rArr; 2
+(set-errno! 0)
+(errno) &rArr; 0
+</pre></td></tr></table>
+</dd>
+</dl>
+
+
+<h2>Implementation</h2>
+
+<p>To be supplied for Chibi Scheme from its SRFI 170 sample implementation.</p>
+
+
+<h2>Acknowledgements</h2>
+
+Thanks to Olin Shivers and John Cowan for SRFI 170, and to the latter for SRFI 198.
+
+
+<h2>Copyright</h2>
+Copyright &copy; Harold Ancell (2020).
+
+<p>
+  Permission is hereby granted, free of charge, to any person
+  obtaining a copy of this software and associated documentation files
+  (the "Software"), to deal in the Software without restriction,
+  including without limitation the rights to use, copy, modify, merge,
+  publish, distribute, sublicense, and/or sell copies of the Software,
+  and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:
+
+<p>
+  The above copyright notice and this permission notice (including the
+  next paragraph) shall be included in all copies or substantial
+  portions of the Software.
+<p>
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+  BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+  <hr>
+  <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address></body></html>

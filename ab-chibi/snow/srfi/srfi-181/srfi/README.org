@@ -1,0 +1,4 @@
+Shiro Kawai has contributed a combined sample implementation of SRFIs
+181 and 192.  It can be found in the Github repo of SRFI 192.
+
+See [[https://srfi.schemers.org/srfi-192/][SRFI 192]] ([[https://srfi.schemers.org/srfi-192/srfi-192.tgz][.tgz archive]], [[https://srfi.schemers.org/srfi-192][Github]]).

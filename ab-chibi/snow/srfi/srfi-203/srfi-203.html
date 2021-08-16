@@ -1,0 +1,292 @@
+<!DOCTYPE html> <!-- Time-stamp: <2020-07-09 11:25:03 lockywolf> -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>SRFI 203: A Simple Picture Language in the Style of SICP</title>
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png">
+    <link rel="stylesheet" href="/srfi.css" type="text/css">
+    <meta name="viewport" content="width=device-width, initial-scale=1"></head>
+
+  <body>
+    <h1><a href="https://srfi.schemers.org/"><img class="srfi-logo" src="https://srfi.schemers.org/srfi-logo.svg" alt="SRFI logo" /></a>203: A Simple Picture Language in the Style of SICP</h1>
+
+<p>by Vladimir Nikishkin</p>
+
+<h2>Status</h2>
+
+<p>This SRFI is currently in <em>draft</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+203+at+srfi+dotschemers+dot+org">srfi-203@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-203">archive</a>.</p>
+<ul>
+  <li>Received: 2020-07-08</li>
+  <li>60-day deadline: 2020-09-06</li>
+  <li>Draft #1 published: 2020-07-08</li>
+</ul>
+
+<h2>Abstract</h2>
+
+<p>This SRFI proposes a simple library for programmatic drawing of
+pictures compatible with the Section 2.2.4 of the Structure and
+Interpretation of Computer Programs.</p>
+
+<p>It aims to close the gap between the Scheme suggested for study in
+the book and portable Scheme.</p>
+
+<h2>Issues</h2>
+
+<ol>
+<li>Parameterizing the canvas name or the canvas size may lead to unexpected
+results.</li>
+<li> <code>canvas-reset</code> and <code>canvas-cleanup</code> are not
+called <code>canvas-reset!</code> and <code>canvas-cleanup!</code>,
+although they are definitely called for side effects. However, in SICP
+the procedures <code>draw-line</code> and <code>rogers</code> do not
+bear an exclamation mark, either.</li>
+<li><code>canvas-name</code> and <code>canvas-size</code> do not behave very
+well.</li>
+<li>The sample implementation litters in the file system with bogus files.</li>
+</ol>
+
+<h2>Rationale</h2>
+
+<p>The <cite>Structure and Interpretation of Computer Programs</cite> is one of the
+world's most famous programming textbooks. The code examples in the book are
+given in Scheme, and the exercises are mostly expected to be done in Scheme.
+The examples and exercises are best executed with a Scheme system
+that implements a reasonable subset of the Scheme language.
+Furthermore, the textbook assumes the existence of several primitives not
+included in any of the Scheme reports.
+Most of these primitives are already either covered by other relevant SRFIs,
+or can be implemented on top of those.
+The picture language of the Section 2.2.4 cannot, however, be portably
+implemented using any of the portable Scheme libraries.
+This SRFI aims to fill this gap.</p>
+
+<p>
+Potentially, this SRFI may serve as one of the building blocks on
+which another SRFI, dedicated to
+providing in full all the
+language facilities assumed by SICP (similarly to the SRFI 96), may be implemented.
+</p>
+
+<p>This SRFI is not a complete implementation of the picture language as it is
+presented in the Section 2.2.4.
+This is intentional. The scope of this SRFI is not to implement the whole
+drawing library presented, but only to implement the minimal subset on top of
+which the code from the book can be run.
+This leads to procedures accepting as arguments certain data structures
+for which constructors are not provided within this SRFI.
+Those should be sufficiently easy to implement using the code from the book.
+Nevertheless, the code from the sample implementation test file can be
+reused.</p>
+
+<h2>Specification</h2>
+
+
+<!-- <P> -->
+<!-- <DL> -->
+<!-- <DT><U>Parameter:</U> <code>canvas-size</code> -->
+<!-- <DD> -->
+<!-- For pixel-based displays, defines the size of the canvas in pixels. -->
+<!-- For all other types of displays, defines the size of the canvas in the units -->
+<!-- most natural for that type of display. -->
+<!-- The default value is 200. -->
+<!-- </DL> -->
+
+
+<!-- <P> -->
+<!-- <DL> -->
+<!-- <DT><U>Parameter:</U> <code>canvas-name</code> -->
+<!-- <DD> -->
+<!-- Defines a system-dependent name for a file. -->
+<!-- </DL> -->
+
+<DL>
+<DT><U>Procedure:</U> <code>(canvas-reset)</code>
+<DD>
+Creates a new blank canvas on which subsequent calls to drawing procedures shall
+draw.
+
+<DT><U>Procedure:</U> <code>(canvas-refresh)</code>
+<DD>
+Returns a system-dependent identifier (not to be confused with Scheme
+identifiers) of the canvas on which the procedures from
+this package may draw.
+The canvas may not exist unless it has been drawn on.
+
+<DT><U>Procedure:</U> <code>(canvas-cleanup)</code>
+<DD>
+Deletes the current canvas and cleans the space it occupies.
+
+<DT><U>Procedure:</U> <code>(draw-line start end)</code>
+<DD>
+Draws a line on the canvas starting at <code>(car start)</code> , <code> (car
+(cdr start))</code> and ending at <code>(car end)</code> , <code> (car
+(cdr end))</code>.
+
+It is an error if <code>start</code> is not a list of at least two numbers.
+It is an error if <code>end</code> is not a list of at least two numbers.
+
+<DT><U>Procedure:</U> <code>(rogers v-list)</code>
+<DD>
+<p>Draws an image of MIT's founder, William Barton Rogers, as shown in
+Figure 2.11 of SICP, on the canvas so that it fits the frame defined
+by the vectors <code>(car v-list)</code>, <code>(car (cdr v-list))</code> and
+<code>(car (cdr (cdr v-list)))</code> in a natural linear algebraic way.</p>
+
+<p>
+It is an error if <code>v-list</code> is not a list of at least three elements,
+each of which is a list of at least two numbers.</p>
+
+<p>
+<code>v-list</code> may be one of the possible implementations of a frame,
+in the SICP terminology. However, in order to avoid nudging the potential
+users of the library into a particular implementation of frames, we
+opted to specify one of the possible underlying data structures directly.
+Converting between this representation, as well as any other representation,
+should be a relatively simple exercise.</p>
+
+</DL>
+
+<h3>Additional procedures</h3>
+
+<p>These procedures, although they are not strictly needed for SICP, may make
+programming with the picture language less mundane.</p>
+
+<DL>
+<DT><U>Procedure:</U> <code>(draw-bezier . v-list)</code>
+<DD>
+
+<p>Draws a cubic Bezier curve between the first and the last points in the
+<code>v-list</code>. If the list has four elements, the middle two are
+used as knots. If the list has three elements, the curve is a quadric curve.
+Otherwise the result is unspecified.</p>
+
+<p>
+It is an error if <code>v-list</code> is not a list of at least three elements,
+each of which is a list of at least two numbers.</p>
+
+<DT><U>Procedure:</U> <code>(jpeg-file->painter file-name)</code>
+<DD>
+
+<p>If <code>file-name</code> exists and is a JPEG file,
+<code>jpeg-file->painter</code> returns
+a painter similar to <code>rogers</code>, that is a procedure that
+accepts a frame and draws the image located at <code>file-name</code>
+shifted, rotated, and skewed to fit into the frame.
+Otherwise, the result is unspecified.</p>
+</DL>
+
+<h2> Examples </h2>
+
+<p>
+The exemplar use of this SRFI can be found in the
+attached <code>srfi-sicp-pictures.org</code> file, which exploits
+the <code>org-display-inline-images</code> feature of Emacs&#39 <code>org-mode</code>.
+</p>
+
+The code below is more or less a copy of the code from the test. When
+in doubt, consider referring to the org file.
+
+<pre>
+(import (scheme red))
+(import (srfi 203))
+
+(define (make-vect xcor ycor . o)
+  (append (list xcor) (list ycor) o))
+
+(define (make-frame origin edge1 edge2)
+  (list origin edge1 edge2))
+
+(canvas-reset)
+(landau (make-frame (make-vect 0 0) (make-vect 0.5 0.0) (make-vect 0.0 0.5)))
+(rogers (make-frame (make-vect 0.5 0.5) (make-vect 0.5 0.0) (make-vect 0.0 0.5)))
+(draw-line (make-vect 0.5 0.5) (make-vect 0 1.0))
+(draw-bezier (make-vect 0.0 0.5)
+             (make-vect 0.0 1)
+             (make-vect 0.5 0.5)
+             (make-vect 0.5 1)
+)
+(define testpainter (jpeg-file->painter "lambda.jpg"))
+(testpainter (make-frame (make-vect 0.5 0.0) (make-vect 0.5 0.1) (make-vect 0.1 0.5)))
+(display (canvas-refresh))
+
+</pre>
+
+<h2>Implementation</h2>
+
+<p>The <code>203.sld</code> and <code>203.scm</code> files constitute
+a simple file-based implementation, in which the "system-dependent
+identifier" corresponds to a file name.</p>
+
+
+<h2>References</h2>
+<OL>
+<LI> Racket (complete) implementation of the picture language.
+    <A HREF="https://planet.racket-lang.org/package-source/soegaard/sicp.plt/2/1/planet-docs/sicp-manual/index.html"> Link </A>
+</LI>
+
+<LI> Racket SICP Library, Picture Language.
+    <A HREF="https://docs.racket-lang.org/sicp-manual/SICP_Picture_Language.html"> Link </A>
+</LI>
+
+<LI> Structure and Interpretation of Computer Programs, companion web site.
+    <A HREF="https://mitpress.mit.edu/sites/default/files/sicp/index.html"> Link </A>
+</LI>
+
+
+<LI> Structure and Interpretation of Computer Programs, companion web site. Problem Set 4 (Picture Language).
+    <A HREF="https://mitpress.mit.edu/sites/default/files/sicp/psets/ps4hnd/readme.html"> Link </A>
+</LI>
+
+<LI> The Picture Language implementation in script-fu by mngu2382.
+    <A HREF="https://mngu2382.github.io/sicp/chapter2/00-notes02a.html"> Link </A>
+</LI>
+
+<LI> The Picture Language implementation in Racket by skanev.
+    <A HREF="https://github.com/skanev/playground/tree/master/scheme/sicp/02/showcase/picturelang"> Link </A>
+</LI>
+
+<LI> Functional Geometry by Peter Henderson.
+    <A HREF="http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.137.1503"> Link </A>
+</LI>
+
+<LI> Unofficial PDF of SICP, second edition.
+     <A HREF="https://web.mit.edu/alexmv/6.037/sicp.pdf"> PDF </A>,
+     <A HREF="https://github.com/jrincayc/sicp-pdf"> Source </A>
+</LI>
+
+
+</OL>
+
+<h2>Acknowledgements</h2>
+
+??? credit where it is due
+
+
+<h2>Copyright</h2>
+Copyright &copy; Vladimir Nikishkin (2020).
+
+<p>
+  Permission is hereby granted, free of charge, to any person
+  obtaining a copy of this software and associated documentation files
+  (the "Software"), to deal in the Software without restriction,
+  including without limitation the rights to use, copy, modify, merge,
+  publish, distribute, sublicense, and/or sell copies of the Software,
+  and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:
+
+<p>
+  The above copyright notice and this permission notice (including the
+  next paragraph) shall be included in all copies or substantial
+  portions of the Software.
+<p>
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+  BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+  <hr>
+  <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address></body></html>

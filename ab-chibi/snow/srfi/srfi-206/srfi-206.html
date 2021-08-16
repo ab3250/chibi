@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>SRFI 206: Auxiliary Syntax Keywords</title>
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png">
+    <link rel="stylesheet" href="https://srfi.schemers.org/srfi.css" type="text/css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+    <h1><a href="https://srfi.schemers.org/"><img class="srfi-logo"
+    src="https://srfi.schemers.org/srfi-logo.svg" alt="SRFI logo"
+    /></a>206: Auxiliary Syntax Keywords</h1>
+
+    <p>by Marc Nieper-Wißkirchen</p>
+
+    <h2 id="status">Status</h2>
+
+    <p>This SRFI is currently in <em>draft</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+206+at+srfi+dotschemers+dot+org">srfi-206@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-206">archive</a>.</p>
+    <ul>
+      <li>Received: 2020-08-14</li>
+      <li>60-day deadline: 2020-10-13</li>
+      <li>Draft #1 published: 2020-08-14</li>
+      <li>Draft #2 published: 2020-08-15</li>
+    </ul>
+
+    <h2 id="abstract">Abstract</h2>
+
+    <p>
+      This SRFI defines a mechanism for defining auxiliary syntax
+      keywords independently in different modules in such a way that
+      they still have the same binding so that they can be used
+      interchangeably as literal identifiers in
+      <code>syntax-rules</code> and <code>syntax-case</code> expressions
+      and can be both imported under the same name without conflicts.
+    </p>
+
+    <h2 id="issues">Issues</h2>
+
+    <ul>
+      <li>The sample Chibi-Scheme implementation is yet a work in progress.</li>
+    </ul>
+
+    <h2 id="rationale">Rationale</h2>
+
+    <p>
+      Literal identifiers in <code>syntax-rules</code>
+      and <code>syntax-case</code> expressions match another
+      identifier if and only if both identifiers have the same lexical
+      binding or if both identifiers are the same and both have no
+      lexical binding.  This equivalence relation is the same as the
+      one defined by <code>free-identifier=?</code> from R4RS and
+      R6RS.
+    </p>
+
+    <p>
+      Macro writers that need these literal identifiers as part of
+      specific surrounding forms have therefore two choices.  Either
+      they match against a bound or against an unbound identifier.
+    </p>
+
+    <p>
+      Matching against an unbound identifier is problematic because
+      an unbound identifier cannot be renamed.
+    </p>
+
+    <p>
+      Usually, as in the derived forms defined in R6RS and R7RS, the
+      literal identifiers are therefore bound.  Their bindings are
+      called auxiliary syntax in R6RS and R7RS.  They are bound to a
+      unique transformer for that syntax.  In other words, two
+      identifiers naming auxiliary syntax match
+      (are <code>free-identifier=?</code>) if and only if they are
+      bound to the same transformer.
+    </p>
+
+    <p>
+      This has a different kind of problem.  Often, the names for
+      auxiliary syntax are either short common words
+      (like <em>else</em>) or simple symbolic identifiers
+      (like <em>=&gt;</em>).  Therefore, independent libraries may
+      each export an auxiliary keyword but all with the same name.  This is
+      problematic when the bindings are not mutually the same (that
+      is, the identifiers are not <code>free-identifier=?</code>).
+    </p>
+
+    <p>
+      This SRFI defines therefore a mechanism for independent
+      libraries to independently export auxiliary syntax that has
+      mutually the same bindings.
+    </p>
+
+    <p>
+      If syntax parameters are supported, this auxiliary syntax is a
+      syntax parameter so that it can be updated hygienically
+      through <code>syntax-parameterize</code>.
+    </p>
+
+    <p>
+      This SRFI also defines a facility for defining auxiliary syntax in
+      the above sense lexically locally.  This can be used to
+      auxiliary syntax back into scope and can be interesting for
+      macro writers.
+    </p>
+
+    <p>
+      In the mailing list
+      to <a href="https://srfi.schemers.org/srfi-177/srfi-177.html">SRFI
+      177</a>, the idea of hygienic keywords (where keywords are
+      understood in the sense of SRFI 177) has been discussed.
+      Arguments in favor of hygienic keywords were the avoidance of
+      any runtime overhead and that they bring in all the advantages
+      of the usual Scheme macro hygiene.  One argument against
+      hygienic keywords was that independent libraries may want to
+      independently export hygienic keywords under the same name
+      without conflicts.  That is now possible with this SRFI.
+    </p>
+
+    <h3>Examples</h3>
+
+    <h4>Matching of literal identifiers</h4>
+
+    <p>
+      The following expression</p> <pre>(let* ()
+  (define-auxiliary-syntax foo foo)
+  (define-syntax is-foo?
+    (syntax-rules (foo)
+      ((_ foo) #t)
+      ((_ _) #f)))
+  (let* ()
+    (is-foo? foo)))</pre> <p>evaluates to <code>#t</code> as does the
+    expression</p> <pre>(let* ()
+  (define-auxiliary-syntax foo foo)
+  (define-syntax is-foo?
+    (syntax-rules (foo)
+      ((_ foo) #t)
+      ((_ _) #f)))
+  (let* ()
+    (define-auxiliary-syntax bar foo)
+    (is-foo? bar)))</pre>
+
+    <p>
+      On the other hand,</p> <pre>(let* ()
+  (define-auxiliary-syntax foo foo)
+  (define-syntax is-foo?
+    (syntax-rules (foo)
+      ((_ foo) #t)
+      ((_ _) #f)))
+  (let ()
+    (define-syntax foo (syntax-rules ()))
+    (is-foo? foo)))</pre>
+      <p>evaluates to <code>#f</code>.
+    </p>
+
+    <h4>Importing from the magic library <code>(srfi 206 *)</code></h4>
+
+    <p>
+      The library declaration</p>
+      <pre>(import (rename (only (srfi 206 *) foo bar) (bar baz)))</pre>
+      <p>is (apart from the binding of
+      the <code>define-auxiliary-syntax</code> identifier) equivalent to
+      the library declarations</p>
+      <pre>(import (srfi 206))
+(begin
+  (define-auxiliary-syntax foo foo)
+  (define-auxiliary-syntax baz bar))</pre>
+
+    <h4>Syntax parameters</h4>
+
+    <p>
+      When auxiliary syntax is <code>syntax-parameterize</code>d, its
+      identity (as far as <code>free-identifier=?</code> is concerned)
+      does not change.
+    </p>
+
+    <p>
+      For example, the following expression</p>
+<pre>
+(syntax-parameterize
+    ((unquote
+      (syntax-rules ()
+        ((_ e) (eval e (environment '(scheme base)))))))
+  (let ((x '(+ 1 2)))
+    (list `,x ,x)))</pre> <p>evaluates to
+      <code>((+ 1 2) 3)</code>.
+    </p>
+
+    <h2 id="specification">Specification</h2>
+
+    <h3>Syntax</h3>
+
+    <p>
+      This SRFI defines one syntax binding
+      form, <code>define-auxiliary-syntax</code>.
+    </p>
+
+    <p><code>(define-auxiliary-syntax〈keyword〉〈symbol〉)</code></p>
+
+    <p>
+      This form is a definition that can be used wherever syntax
+      definitions are allowed.
+    </p>
+
+    <p>
+      The <code>〈keyword〉</code> is
+      bound to (auxiliary) syntax named by <code>〈symbol〉</code>.
+    </p>
+
+    <p>
+      A <code>〈keyword〉</code> bound
+      through <code>define-auxiliary-syntax</code> has the same
+      binding as another identifier (that is, they
+      are <code>free-identifier=?</code>) if and only if the other
+      identifier is also bound
+      through <code>define-auxiliary-syntax</code> and with the same
+      name.
+    </p>
+
+    <p>
+      In a Scheme supporting syntax parameters
+      (see <a href="https://srfi.schemers.org/srfi-139/srfi-139.html">SRFI
+	139</a>), the auxiliary syntax are syntax parameters.
+    </p>
+
+    <h3>Libraries</h3>
+
+    <p>
+      This SRFI defines two libraries, <code>(srfi 206)</code>
+      and <code>(srfi 206 *)</code>.
+    </p>
+
+    <p>
+      The <code>define-auxiliary-syntax</code> keyword is (the sole
+      identifier) exported by the library <code>(srfi 206)</code>.
+    </p>
+
+    <p>
+      The library <code>(srfi 206 *)</code> is a (magic) library that
+      can, in import sets, only be referenced in the form <code>(only
+      (srfi 206 *) 〈identifier〉…)</code>.  This import set imports
+      the <code>〈identifier〉</code>s, each bound at top-level as if
+      through <code>define-auxiliary-syntax</code>, to auxiliary syntax
+      with the respective name.
+    </p>
+
+    <h3>Interoperability</h3>
+
+    <p>
+      In a Scheme implementation supporting this SRFI, all auxiliary
+      syntax, in particular the
+      identifiers <code>else</code>, <code>=&gt;</code>, <code>unquote</code>,
+      <code>unquote-splicing</code>, <code>_</code>, <code>...</code>
+      defined in <code>(scheme base)</code> behave as if defined
+      through <code>define-auxiliary-syntax</code> with their
+      respective names.
+    </p>
+
+    <p>
+      Syntax parameters that have no sensible initial binding
+      (like <code>yield</code>
+      of <a href="https://srfi.schemers.org/srfi-190/srfi-190.html">SRFI
+	190</a>) shall be bound through <code>define-auxiliary-syntax</code>.
+    </p>
+
+    <p>
+      It is recommended to maintain a list of auxiliary syntax used by
+      Scheme standards and
+      implementations <a href="https://registry.scheme.org/">at the
+      Scheme Registry</a>.
+    </p>
+
+    <h2 id="implementation">Implementation</h2>
+
+    <p>This SRFI cannot be implemented portably in R6RS or R7RS
+      alone.  A sample implementation for Chibi-Scheme will be provided.
+    </p>
+
+    <p>
+      A portable, but incomplete poor man's solution is
+      provided <a href="https://github.com/scheme-requests-for-implementation/srfi-206/tree/master">in
+      the repository</a>.  It will be expanded over time while a
+      registry of auxiliary keywords is being built and while native
+      implementations are catching up.
+    </p>
+
+    <p>
+      In
+      the <a href="https://pdfs.semanticscholar.org/f8f6/d3b704b0ec83d9803377fdb88996853813b1.pdf">original
+      syntax model of the syntax-case expander by R. Kent Dybvig et
+      al.</a> two bound identifiers are <code>free-identifier=?</code>
+      if and only if their associated labels are the same.  An
+      implementation following this model thus has to maintain a
+      (weak) hash-table mapping (symbolic) names to labels.  Whenever
+      auxiliary syntax with some name is defined the associated label
+      is looked up or, if it does not exist yet, created on the fly.
+      In a given environment, these labels resolve to suitable
+      transformers.
+    </p>
+
+    <h2 id="acknowledgements">Acknowledgements</h2>
+
+    <p>
+      Credit goes to Adam Nelson, Jim Rees, Alex Shinn, and
+      everyone else who initially discussed the idea for this SRFI on the
+      <a href="https://srfi.schemers.org/srfi-197/srfi-197.html">SRFI 197</a> mailing list.
+    </p>
+
+    <p>
+      Special thanks go to John Cowan for reviewing a pre-draft of
+      this SRFI.
+    </p>
+
+    <h2 id="copyright">Copyright</h2>
+    <p>Copyright &copy; Marc Nieper-Wißkirchen (2020).</p>
+
+    <p>
+      Permission is hereby granted, free of charge, to any person
+      obtaining a copy of this software and associated documentation files
+      (the "Software"), to deal in the Software without restriction,
+      including without limitation the rights to use, copy, modify, merge,
+      publish, distribute, sublicense, and/or sell copies of the Software,
+      and to permit persons to whom the Software is furnished to do so,
+      subject to the following conditions:</p>
+
+    <p>
+      The above copyright notice and this permission notice (including the
+      next paragraph) shall be included in all copies or substantial
+      portions of the Software.</p>
+    <p>
+      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+      EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+      MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+      NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+      BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+      ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+      CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+      SOFTWARE.</p>
+
+    <hr>
+    <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address></body></html>

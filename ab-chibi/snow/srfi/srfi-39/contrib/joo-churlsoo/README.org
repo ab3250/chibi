@@ -1,0 +1,13 @@
+This is an alternative implementation of SRFI 39 provided by Joo
+ChurlSoo.
+
+When asked to compare this implementation to the one included in the
+SRFI document, Joo responded:
+
+  It's literally just another implementation.
+
+  Forcibly comparing, it is like the relationship between pair and
+  list.
+
+  One is comprehensive and extensible, while the other is simple but
+  easy to understand.

@@ -1,0 +1,20 @@
+* SRFI 176: Version flag
+
+** by Lassi Kortela
+
+
+
+keywords: [[https://srfi.schemers.org/?keywords=operating-system][Operating System]]
+
+This repository hosts [[https://srfi.schemers.org/srfi-176/][SRFI 176]]: Version flag, a [[https://srfi.schemers.org/][Scheme Request for Implementation]].
+
+This SRFI is in /final/ status.
+
+The full documentation for this SRFI can be found in the [[https://srfi.schemers.org/srfi-176/srfi-176.html][SRFI Document]].
+
+If you'd like to participate in the discussion of this SRFI, or report issues with it, please [[https://srfi.schemers.org/srfi-176/][join the SRFI-176 mailing list]] and send your message there.
+
+Thank you.
+
+
+[[mailto:srfi-editors@srfi.schemers.org][The SRFI Editors]]

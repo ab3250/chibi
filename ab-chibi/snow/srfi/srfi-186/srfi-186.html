@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>SRFI 186: Transcoders and transcoded ports</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/srfi.css" type="text/css">
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png">
+  </head>
+
+  <body>
+
+<h1>Title</h1>
+
+Transcoders and transcoded ports
+
+<h1>Author</h1>
+
+The R6RS editors; John Cowan (shepherd)
+
+<h1>Status</h1>
+
+<p>This SRFI is currently in <em>final</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+186+at+srfi+dotschemers+dot+org">srfi-186@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-186">archive</a>.</p>
+<ul>
+  <li>Received: 2020-03-09</li>
+  <li>Draft #1 published: 2020-03-09</li>
+  <li>Finalized: 2020-05-12</li>
+  <li>post-finalization note (2020-06-13): In
+    <a href="https://srfi-email.schemers.org/srfi-186/msg/14297380/">Re:
+    SRFI 186: Transcoders and transcoded ports</a>, Jim Rees reported
+    a difference between SRFI 186 and R6RS with respect to end-of-line
+    translation.  John wants to make this SRFI match R6RS in that
+    regard, but since this SRFI has been finalized, it's too late to
+    change it.  Instead, John intends eventually to submit a
+    replacement SRFI that corrects this discrepancy.  When that's
+    ready, he'll withdraw this one and we'll place a link to the new
+    SRFI here.</li>
+</ul>
+
+<h1>Abstract</h1>
+
+This is an extract from the R6RS that documents its support for transcoders and transcoded ports.
+These provide a hook into the Scheme port system from below, allowing the
+creation of textual ports that provide non-default encoding and decoding from
+arbitrary binary ports.  It has been lightly edited to fit R7RS style.
+
+<h1>Rationale</h1>
+
+<p>When reading from (or writing to) files, devices, pipes, sockets,
+or other sources (or sinks) of data, it's sometimes useful or necessary
+to handle textual data that are encoded differently from the system default encoding.</p>
+
+<p>This can be done at a level above Scheme ports, but with some
+loss in convenience.  In particular, the high-level Scheme procedures
+like <code>read</code>, <code>write</code>, and <code>display</code>
+only accept port arguments.  By making it possible to create transcoded ports
+that accept a binary port and return a corresponding textual port,
+convenience is served.</p>
+
+<h1>Specification</h1>
+
+<p>
+Several different character encoding schemes exist that describe standard ways to
+encode characters and strings as byte sequences and to decode those
+sequences.
+Within this document, a <em>codec</em> is an immutable Scheme
+object that represents a Unicode or similar encoding scheme.</p>
+<p>
+An <em>end-of-line style</em> is a symbol that
+describes how a textual port transcodes representations of
+line endings.
+The symbols <code>lf</code> and <code>none</code> mean
+that no newline conversion is done.
+The symbol <code>crlf</code> means that after decoding
+with a codec, the sequence <code>CRLF</code>, that is,
+a <code>#\return</code> followed by a <code>#\newline</code>,
+is replaced by <code>#\newline</code>.
+Correspondingly, the reverse is done before encoding.
+Implementations may support additional symbols.</p>
+
+<p>
+An <em>error-handling mode</em> is a symbol that
+specifies the behavior
+of textual I/O operations in the presence of encoding or decoding
+errors.</p>
+<p>
+If a textual input operation encounters an invalid or incomplete
+character encoding,
+then if the error-handling mode is <code>replace</code>, the replacement
+it is treated as the character U+FFFD (or if that character is
+not representable by the implementation or is not permitted in
+strings, then by the character U+003F (question mark).
+But if the error-handling mode is <code>raise</code>,
+an error satisfying <code>i/o-decoding-error?</code> is signaled,
+an appropriate number of bytes are ignored, and decoding
+continues with the following bytes.</p>
+<p>
+If a textual output operation encounters a character it cannot encode,
+then if the error-handling mode is <code>replace</code>, a codec-specific
+replacement character is emitted by the transcoder, and encoding
+continues with the next character.
+The replacement character is U+FFFD for transcoders whose codec
+can encode this character, but is U+003F (question mark)
+if it cannot.
+But if the error-handling mode is <code>raise</code>, an
+an error satisfying <code>i/o-encoding-error?</code> is raised,
+and encoding continues with the next character.
+</p>
+<p>
+Implementations may support additional symbols.
+<p>
+A <em>transcoder</em> is an immutable Scheme object that combines
+a codec, an end-of-line style, and an error-handling mode.
+Each transcoder represents some specific bidirectional (but not
+necessarily lossless), possibly stateful translation between byte
+sequences and Unicode characters and strings.
+Every transcoding can decode bytes as characters and encode characters as bytes.
+</p>
+<h2>Procedures</h2>
+<div><code>(make-codec <i>string</i>)</code></div>
+<p>Returns a codec representing the character encoding scheme
+whose standard name is the case-insensitive string <i>string</i>.</p>
+<p>Standard character encoding names for HTML can be found at
+<a href="https://encoding.spec.whatwg.org/#names-and-labels">
+the WHATWG encoding specification</a>, and implementations
+should recognize and support all of these.
+There are a total of 39 encodings, which have between them
+218 standard names.  Note that the "replacement" codec
+signals an error whenever it is used.
+Additional encoding names listed at
+<a href="https://www.iana.org/assignments/character-sets/character-sets.xhtml">
+the IANA page on character sets</a>
+may also be recognized and supported.</p>
+<p>If <code>make-codec</code> is called
+on a string that the implementation does not support,
+an error is signaled.</p>
+
+<div><code>(latin-1-codec<i></i>)</code></div>
+<div><code>(utf-8-codec<i></i>)</code></div>
+<div><code>(utf-16-codec<i></i>)</code></div>
+<p>
+These are predefined codecs for the ISO 8859-1, UTF-8,
+and UTF-16 encoding schemes.</p>
+<p>
+A call to any of these procedures returns a value that is equal in the
+sense of <code>eqv?</code> to the result of any other call to the same
+procedure.
+</p>
+<p>
+</p>
+<div><code>(native-eol-style<i></i>)</code></div>
+<p>
+Returns the default end-of-line style of the underlying platform, typically
+<code>lf</code> on Unix and <code>crlf</code> on Windows.
+</p>
+<div><code>(i/o-decoding-error?<i> obj</i>)</code></div>
+
+<p>
+Returns <code>#t</code> if <i>obj</i> is
+an exception raised when one of the operations for
+textual input from a port encounters a sequence of bytes that cannot
+be decoded into a character or string by the port's transcoder.</p>
+<p>
+When such an exception is raised, the port's position is past
+the invalid encoding.
+</p>
+<div><code>(i/o-encoding-error?<i> obj</i>)</code></div>
+<p>
+Returns <code>#t</code> if <i>obj</i> is
+an exception raised when one of the operations for
+textual output to a port encounters a character that cannot be
+encoded into bytes by the port's transcoder.</p>
+<div><code>(i/o-encoding-error-char<i> i/o-encoding-condition</i>)</code></div>
+<p>
+Returns the character that could not be encoded
+when the condition <i>i/o-encoding-condition</i> was signaled.
+</p>
+<div><code>(make-transcoder<i> codec eol-style handling-mode</i>)</code></div>
+<p>
+Returns a transcoder with the behavior specified by its arguments.
+</p>
+<p>
+</p>
+<div><code>(native-transcoder<i></i>)</code></div>
+<p>
+Returns an implementation-dependent transcoder that represents a
+possibly locale-dependent &ldquo;native&rdquo; transcoding.
+This should be equivalent to the transcoder employed by
+Scheme operations that open textual ports.</p>
+<div><code>(<a id="node_idx_650"></a>transcoded-port<i> binary-port transcoder</i>)</code><span style="margin-left: .5em">&zwnj;</span><span style="margin-left: .5em">&zwnj;</span>procedure&nbsp;</div>
+<p>
+Returns a new textual port with the specified <i>transcoder</i>
+from <i>binary-port</i>.
+The new textual port's state is largely the same as
+that of <i>binary-port</i>.
+If <i>binary-port</i> is an input port, the new textual
+port will be an input port and
+will decode the bytes of <i>binary-port</i>.
+If <i>binary-port</i> is an output port, the new textual
+port will be an output port and
+will write encoded characters to <i>binary-port</i>.
+<p>
+It is an error to call this procedure on <i>binary-port</i>
+after it has been read from or written to.
+It is also an error to read or write on <i>binary-port</i>
+after calling this procedure.
+</p>
+<div><code>(bytevector-&gt;string<i> bytevector transcoder</i>)</code></div>
+<p>
+Returns the string that results from decoding the
+<i>bytevector</i> according to the input direction of the transcoder.
+</p>
+<div><code>(string-&gt;bytevector<i> string transcoder</i>)</code></div>
+<p>
+Returns the bytevector that results from encoding the
+<i>string</i> according to the output direction of the transcoder.
+</p>
+<p>
+</p>
+
+<h1>Implementation</h1>
+
+<p>Every conforming R6RS implementation, including at least Chez, Guile, IronScheme,
+Larceny, Racket, and Vicare, already provides these procedures
+with the exception of <code>make-codec</code>, as there is no portable way to create
+a codec for a named encoding in R6RS
+in the <code>(rnrs io ports)</code> library.
+Therefore, no implementation is provided here, especially since 
+a portable implementation is not possible.</p>
+
+<h1>Acknowledgements</h1>
+
+This would have been much more difficult without the R6RS team,
+who produced a good-enough (as opposed to perfect) design
+that John was happy to adopt.  Thanks also to Mikel More,
+who convinced him of the necessity of having transcoded ports in R7RS-large.
+
+<h1>Copyright</h1>
+
+<p>John Cowan does not claim copyright on his <i>de minimis</i> contributions
+to this SRFI.  Its content is drawn almost entirely from R6RS,
+which does not have a copyright notice.
+It does, however, contain the following copyright license:</p>
+
+<blockquote>
+We intend this report to belong to the entire Scheme community, and so we grant permission to copy it in whole or in
+part without fee.
+</blockquote>
+
+<p>Nevertheless, in order to keep the lawyers happy, the standard
+SRFI license is subjoined:</p>
+
+<blockquote>
+  Permission is hereby granted, free of charge, to any person
+  obtaining a copy of this software and associated documentation files
+  (the "Software"), to deal in the Software without restriction,
+  including without limitation the rights to use, copy, modify, merge,
+  publish, distribute, sublicense, and/or sell copies of the Software,
+  and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:
+
+<p>
+  The above copyright notice and this permission notice (including the
+  next paragraph) shall be included in all copies or substantial
+  portions of the Software.
+<p>
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+  BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+</blockquote>
+
+  <hr>
+  <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address></body></html>

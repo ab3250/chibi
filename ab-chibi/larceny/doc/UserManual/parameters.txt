@@ -1,0 +1,136 @@
+Parameters
+~~~~~~~~~~
+
+Parameters are procedures that serve as containers for values.
+
+When called with no arguments, a parameter returns its current value.
+The value of a parameter can be changed temporarily using the
+'parameterize' syntax described below.
+
+The effect of passing arguments to a parameter is implementation-dependent.
+In Larceny, passing one argument to a parameter changes the current value
+of the parameter to the result of applying a _converter_ procedure to that
+argument, as described by SRFI 39.
+
+proc:make-parameter[args="init",result="procedure"]
+proctempl:make-parameter[args="init converter",result="procedure"]
+proctempl:make-parameter[args="name init predicate",result="procedure"]
+
+Creates a parameter.
+
+When 'make-parameter' is called with one argument _init_,
+the parameter's initial value is _init_, and the parameter's
+_converter_ will be the identity function.
+
+When 'make-parameter' is called with two arguments,
+_converter_ must be a procedure that accepts one argument,
+and the parameter's initial value is the result of calling
+_converter_ on _init_.
+
+Larceny extends SRFI 39 and the R7RS specification of 'make-parameter'
+by allowing it to be called with three arguments.
+The first argument, _name,_ must be a symbol or string giving the
+print name of the parameter.
+The second argument, _init,_ will be the initial value of the parameter.
+The third argument is a _predicate_ from which Larceny constructs a
+_converter_ procedure that acts like the identity function on arguments
+that satisfy the _predicate_ but raises an exception on arguments that
+don't.
+
+proctempl:make-parameter[args="name init",result="procedure"]
+
+Larceny's parameter objects predate SRFI 39.
+For backward compatibility, Larceny's 'make-parameter' will
+accept two arguments even if the second is not a procedure,
+provided the first argument is a symbol or string.
+In that special case, the two arguments will be treated as the
+_name_ and _init_ arguments to Larceny's three-argument version,
+with the _predicate_ defaulting to the identity function.
+_This extension is strongly deprecated._
+
+
+_Syntax parameterize_
+
+++ (parameterize ((parameter0 value0) ...) expr0 expr1 ...)++
+
+'Parameterize' temporarily overrides the values of a set of parameters
+while the expressions in the body of the 'parameterize' expression are
+evaluated.
+(It is like 'fluid-let' for parameters instead of variables.)
+
+==== Larceny parameters
+
+The following is a partial list of Larceny's parameters.
+The first three are described by the R7RS standard.
+Most of the others are intended for use by developers of Larceny;
+some are described in Wiki pages at Larceny's GitHub site,
+while others are described only by source code.
+
+link:#current-input-port[_Parameter current-input-port_]
+
+link:#current-output-port[_Parameter current-output-port_]
+
+link:#current-error-port[_Parameter current-error-port_]
+
+link:#console-input-port-factory[_Parameter console-input-port-factory_]
+
+link:#console-output-port-factory[_Parameter console-output-port-factory_]
+
+_Parameter print-level_
+
+_Parameter print-length_
+
+_Parameter herald_
+
+_Parameter issue-deprecated-warnings?_
+
+_Parameter case-sensitive?_
+
+_Parameter read-square-bracket-as-paren_
+
+_Parameter read-r6rs-flags?_
+
+_Parameter read-r7rs-weirdness?_
+
+_Parameter read-r6rs-weirdness?_
+
+_Parameter read-r5rs-weirdness?_
+
+_Parameter read-larceny-weirdness?_
+
+_Parameter read-traditional-weirdness?_
+
+_Parameter read-mzscheme-weirdness?_
+
+_Parameter load-verbose_
+
+_Parameter interaction-environment_
+
+_Parameter evaluator_
+
+_Parameter load-evaluator_
+
+_Parameter repl-evaluator_
+
+_Parameter repl-level_
+
+_Parameter repl-printer_
+
+_Parameter break-handler_
+
+_Parameter error-handler_
+
+_Parameter quit-handler_
+
+_Parameter reset-handler_
+
+_Parameter keyboard-interrupt-handler_
+
+_Parameter timer-interrupt-handler_
+
+_Parameter standard-timeslice_
+
+_Parameter structure-comparator_
+
+_Parameter structure-printer_
+

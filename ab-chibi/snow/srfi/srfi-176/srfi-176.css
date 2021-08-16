@@ -1,0 +1,10 @@
+table#survey {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+
+table#survey td,
+th {
+  border: 1px solid black;
+  text-align: center;
+}

@@ -1,0 +1,20 @@
+MANIFEST (this file)
+
+Chibi Scheme sample implementation:
+
+chibi-scheme/Makefile
+chibi-scheme/README.md
+chibi-scheme/lib/srfi/198.sld
+chibi-scheme/lib/srfi/198/198.stub
+chibi-scheme/lib/srfi/198/COPYING
+chibi-scheme/lib/srfi/198/test.sld
+chibi-scheme/lib/srfi/198/TODO.txt
+
+System independent sample implementation work:
+
+artifacts/cygwin.inc
+artifacts/freebsd.inc
+artifacts/linux.inc
+artifacts/macosx.inc
+artifacts/openbsd.inc
+artifacts/posix-errors

@@ -1,0 +1,55 @@
+# -*- mode: org; -*-
+# Time-stamp: <2020-07-09 11:02:12 lockywolf>
+
+#+STARTUP: inlineimages
+
+#+begin_src shell :exports both :results raw output :shebang "#!/usr/bin/chibi-scheme"
+(import (scheme red))
+(import (srfi 203))
+
+(define (make-vect xcor ycor . o)
+  (append (list xcor) (list ycor) o))
+
+(define (make-frame origin edge1 edge2)
+  (list origin edge1 edge2))
+
+(canvas-reset)
+(landau (make-frame (make-vect 0 0) (make-vect 0.5 0.0) (make-vect 0.0 0.5)))
+(rogers (make-frame (make-vect 0.5 0.5) (make-vect 0.5 0.0) (make-vect 0.0 0.5)))
+(draw-line (make-vect 0.5 0.5) (make-vect 0 1.0))
+(draw-bezier (make-vect 0.0 0.5)
+             (make-vect 0.0 1)
+             (make-vect 0.5 0.5)
+             (make-vect 0.5 1)
+)
+(define testpainter (jpeg-file->painter "lambda.jpg"))
+(testpainter (make-frame (make-vect 0.5 0.0) (make-vect 0.5 0.1) (make-vect 0.1 0.5)))
+(display (canvas-refresh))
+
+#+end_src
+
+#+RESULTS:
+[[./4ade8870-a99a-49e6-9e73-7e0d7094f5c9.png]]
+
+
+
+#+begin_src shell :exports both :results raw output :shebang "#!/usr/bin/chibi-scheme"
+(import (scheme red))
+(import (srfi 203))
+
+(define (make-vect xcor ycor . o)
+  (append (list xcor) (list ycor) o))
+
+(define (make-frame origin edge1 edge2)
+  (list origin edge1 edge2))
+
+(canvas-reset)
+(rogers (make-frame (make-vect 0 0) (make-vect 1 0) (make-vect 0 1)))
+(draw-line (make-vect 0 0) (make-vect 0.1 1.0))
+(display (canvas-refresh))
+(canvas-cleanup)
+#+end_src
+
+#+RESULTS:
+[[./7a04afab-9f6f-47b8-b812-d803f9a4090f.png]]
+

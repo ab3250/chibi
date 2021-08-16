@@ -1,0 +1,42 @@
+[[LarcenyLoadSection]]
+
+Load
+~~~~
+
+The `(larceny load)` library exports both the
+`load` procedure of `(scheme load)`
+and Larceny's `r5rs:require` procedure, which is a renaming of
+the <<require,`require`>> procedure used by
+Larceny's R5RS mode.
+
+In Larceny's R7RS mode,
+the `load` procedure can load
+R5RS libraries and programs as well as R7RS/R6RS
+libraries.
+
+[WARNING]
+================================================================
+Loading an R5RS source file into an R7RS session is not equivalent
+to loading the compiled form of that file.  For explanation, see
+the previous section on
+<<LoadingR5intoR7Section,loading compiled R5RS files into an R7RS session>>.
+================================================================
+
+The `r5rs:require` procedure should be used only for dynamic loading of
+R5RS libraries into Larceny's underlying R5RS system.  The
+variables defined by that library can be imported into
+an R7RS session or R7RS/R6RS library or program using a
+<<R7rsPrimitivesSection, `primitives`>>
+clause in an `import` form.
+
+[WARNING]
+================================================================
+These procedures should be used only at an interactive top
+level and in files that will be loaded into an interactive top
+level.  Calls to these procedures have no effect at compile
+time, and should not appear in files that will be compiled
+separately; use the `define-library` and `import` syntaxes
+instead.
+================================================================
+
+

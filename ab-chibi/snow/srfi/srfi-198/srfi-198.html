@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>SRFI 198: Foreign Interface Status</title>
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png">
+    <link rel="stylesheet" href="https://srfi.schemers.org//srfi.css" type="text/css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      table.t1 {
+        margin: 1em auto;
+        border-collapse: collapse;
+      }
+      .t1 th, .t1 td {
+        padding: 4px 8px;
+      }
+      .t1 thead th {
+        text-align: left;
+        font-size: 15px;
+      }
+      .t1 tr {
+        border-right: 1px solid;
+        border-left: 1px solid;
+      }
+      .t1 tbody tr {
+        border-bottom: 1px solid;
+      }
+     .t1 tbody tr:nth-child(odd) {
+        border-top: 1px solid;
+      }
+      .t1 tbody th, .t1 tbody tr:nth-child(even) td {
+        border-right: 1px solid;
+        text-align: left;
+      }
+      .t1 tr *:nth-child(3), .t1 tr *:nth-child(4) {
+        text-align: left;
+      }
+    </style>
+  </head>
+  <body>
+    <h1><a href="https://srfi.schemers.org/"><img class="srfi-logo" src="https://srfi.schemers.org/srfi-logo.svg" alt="SRFI logo" /></a>198: Foreign Interface Status</h1>
+
+
+<p>
+by John Cowan, Lassi Kortela, and Harold Ancell
+</p>
+
+
+<h2>Status</h2>
+
+<p>This SRFI is currently in <em>draft</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+198+at+srfi+dotschemers+dot+org">srfi-198@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-198">archive</a>.</p>
+<ul>
+  <li>Received: 2020-06-16</li>
+  <li>60-day deadline: 2020-08-15</li>
+  <li>Draft #1 published: 2020-06-16</li>
+  <li>Draft #2 published: 2020-06-24</li>
+  <li>Draft #3 published: 2020-07-18</li>
+  <li>Draft #4 published: 2020-08-17</li>
+  <li>Harold Ancell's <a href="https://github.com/hga/srfi-198">personal
+    Git repo for this SRFI</a> for reference while the SRFI is in
+    <em>draft</em> status (<a href="https://htmlpreview.github.io/?https://github.com/hga/srfi-198/blob/master/srfi-198.html">preview</a>)</li>
+</ul>
+
+
+<h2>Abstract</h2>
+
+<p>
+This SRFI provides means to construct, return or signal, and extract
+information from Scheme interfaces with "foreign" systems such as the
+P<small>OSIX</small> API, databases, and libraries.
+</p>
+
+
+<h2>Issues</h2>
+
+<ul>
+<li>
+The <code>'convention</code> key requires a better name, and it's
+not <code>'set</code>.
+<code>'sub-convention</code> will follow the new name.
+</li>
+<li>
+If the <code>'convention</code> key should be required for all status
+and error objects.
+</li>
+<li>
+If the SRFI should return to using alists with their long history in
+Scheme vs. plists which have never been a part of its ecosystem.
+</li>
+<li>
+How to add localization, by convention and/or new APIs.
+</li>
+<li>
+Whether to add "transparent" calling of lambdas that are values
+by foreign-status-ref, and alternatively, how to retrieve them.
+</li>
+<li>
+The exact set of "standard" keys to be defined in the "Standard status
+conventions" section:
+</li>
+<li>
+Should the standard key <code>'message</code> be replaced by the
+shorter <code>'text</code>?
+</li>
+<li>
+Should <code>'source-filename</code>, <code>'line-number</code>,
+and <code>'column-number</code> be in the SRFI's list of standard
+keys, or in Schemeregistry?  They increase its surface by one half.
+</li>
+</ul>
+
+<h2>Rationale</h2>
+
+<p>R6RS and R7RS-large have ambitions to become comprehensive
+ecosystems useful for developing real-world applications.  This
+necessitates the development of many interfaces to "foreign" systems,
+ranging from direct Foreign Function Interfaces (FFIs) to low level
+assembler and C libraries, including APIs at that level such as
+P<small>OSIX</small>, to protocols such as TCP/IP, all the way to
+client-server systems such as databases running in their own
+separate processes.</p>
+
+<p>This SRFI provides a comprehensive framework for placing data about
+the status of an interaction with a foreign system into an object,
+starting with <em>conventions</em> to partition collections of them,
+such as <code>'errno</code>, <code>'sqlstate</code>, and
+<code>'generic-c-lib</code>, to localize them, and to report them.</p>
+
+<p>Sometimes it will make sense to simply return a status object, but
+an often preferred method for errors is to raise an exception, as in
+<a href="https://srfi.schemers.org/srfi-170/srfi-170.html">SRFI
+170</a>, in which procedures never return error codes nor use an
+analogue of the P<small>OSIX</small> <code>errno</code> variable to
+indicate system-call-level errors.</p>
+
+<p>Thus procedures can return useful values, and the programmer can
+assume that if a foreign interface procedure returns, it succeeded.
+This greatly simplifies the flow of the code from the programmer's
+point of view.</p>
+
+
+<h2>Specification</h2>
+
+<p>
+The universe of foreign statuses is divided into distinct collections
+named <em>conventions</em> based on their source.
+The conventions <code>'status</code> and <code>'error</code> are
+reserved for generic situations, such as sanity error checking before
+a foreign interface is invoked.
+</p>
+
+<p>
+Example conventions and sub-conventions include:
+</p>
+
+<table class="t1">
+<tr><th>'errno</th> <th></th> <th><a href="https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/errno.h.html">P<small>OSIX</small> errnos</a></th></tr>
+<tr><th>'sqlstate</th> <th>'postgresql</th> <th><a href="https://www.postgresql.org/docs/current/errcodes-appendix.html">The PostgreSQL database</a></th></tr>
+<tr><th>'generic-c-lib</th> <th>'libsodium</th> <th><a href="https://doc.libsodium.org/">The libsodium cryptography library</a></th></tr>
+</table>
+
+<p>
+P<small>OSIX</small> errnos are a familiar error system with a
+moderate degree of structure, and were the initial inspiration for
+this SRFI.
+PostgreSQL is a representative SQL RDBMS with a richer set of SQLSTATE
+data that can be transmitted to the user, and its client/server
+organization is a useful counterpoint to using an FFI.
+libsodium has a typical simple UNIX&trade; style C API that returns 0
+on success and -1 on error, with no inherent structure.
+The <code>'generic-c-lib</code> convention is suitable for many of these
+libraries.
+<p>
+
+<p>
+This SRFI uses property lists (plists).  They are simple lists of
+alternating keys and values, such as:
+</p>
+<blockquote>
+<pre class="example">
+('key1 "value1" 'key2 "value2")
+</pre>
+</blockquote>
+
+<h3>Status object predicate</h3>
+
+<code>(foreign-status? <i>object</i>)</code> &nbsp;&nbsp;&nbsp;&rarr; &nbsp;&nbsp;&nbsp;<i>boolean</i> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(procedure)
+<blockquote>
+<p>
+Returns #f unless <i>object</i> is a SRFI 198 status object.
+</p>
+<pre class="example">
+(foreign-status? "This is not an foreign status object") &rArr; #f
+(foreign-status? (make-foreign-status &lt;argument&gt;)) &rArr; #t
+</pre>
+</blockquote>
+
+<h3>Status data getters</h3>
+
+<code>(foreign-status-ref <i>foreign-status-object key</i>)</code> &nbsp;&nbsp;&nbsp;&rarr; &nbsp;&nbsp;&nbsp;<i>value</i> or <code>#f</code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(procedure)
+<blockquote>
+<p>
+Returns the value in a foreign status object associated
+with <i>key</i> , or <code>#f</code> if <i>key</i> is not in the object.
+</p>
+<pre class="example">
+(foreign-status-ref &lt;foreign-status-object&gt; &lt;key not in object&gt;) &rArr; #f
+(foreign-status-ref &lt;POSIX-foreign-error-object&gt; 'convention) &rArr; errno
+</pre>
+</blockquote>
+
+<br>
+
+<code>(foreign-status-keys <i>foreign-status-object</i>)</code> &nbsp;&nbsp;&nbsp; &rarr; &nbsp;&nbsp;&nbsp; <i>list</i> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(procedure)
+<blockquote>
+<p>
+Returns all the keys in a foreign status object in a list.
+</p>
+<pre class="example">
+(foreign-status-keys &lt;POSIX-foreign-error-object&gt;)
+</pre>
+<pre class="example">
+  &rArr; (convention errno number name scheme-procedure foreign-interface message args heritage)
+</pre>
+<pre class="example">
+(foreign-status-keys &lt;PostgreSQL-wire-foreign-status-object&gt;)
+</pre>
+<pre class="example">
+  &rArr; (convention sub-convention sqlstate category class-text condition-name scheme-procedure foreign-interface message args)
+</pre>
+<pre class="example">
+(foreign-status-keys &lt;libsodium-foreign-status-object&gt;)
+</pre>
+<pre class="example">
+  &rArr; (convention sub-convention scheme-procedure foreign-interface message)
+</pre>
+</blockquote>
+
+<br>
+
+<code>(foreign-status->plist <i>foreign-status-object</i>)</code> &nbsp;&nbsp;&nbsp; &rarr; &nbsp;&nbsp;&nbsp; <i>plist</i> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(procedure)
+<blockquote>
+<p>
+Returns all the key/value pairs in a foreign status object as a plist,
+the <code>'convention</code> key is guaranteed to be the first one.
+It is an error to mutate the plist.
+</p>
+<pre class="example">
+(foreign-status->plist &lt;POSIX-foreign-error-object&gt;)
+</pre>
+<pre class="example">
+  &rArr; (convention errno
+     number 2
+     name ENOENT
+     scheme-procedure open-file
+     foreign-interface open
+     message "open-file called open: errno/ENOENT: No such file or directory"
+     args ("not-a-valid-filename" 0 428)
+     heritage . "SRFI 170")
+</pre>
+<pre class="example">
+(foreign-status->plist &lt;PostgreSQL-wire-foreign-status-object&gt;)
+</pre>
+<pre class="example">
+  &rArr; (convention sqlstate
+     sub-convention postgresql
+     sqlstate "28P01"
+     category exception
+     class-text "Invalid Authorization Specification"
+     condition-name invalid_password
+     scheme-procedure open-database-connection
+     foreign-interface query-message
+     message "open-database-connection: 28P01: incorrect password"
+     args ("localhost" 5432 "ecb" "ecb"))
+</pre>
+<pre class="example">
+(foreign-status->plist &lt;libsodium-foreign-status-object&gt;)
+</pre>
+<pre class="example">
+ &rArr; (convention generic-c-lib
+    sub-convention libsodium
+    scheme-procedure generate-key
+    foreign-interface sodium-init
+    message "generate-key: ecb-generate-key could not initialize sodium library\n")
+</pre>
+</blockquote>
+
+
+<h3>Status constructors</h3>
+
+<p>
+<code>(make-foreign-status <i>convention-value plist</i>)</code> &nbsp; &rarr; &nbsp; <i>foreign-status-object</i> &nbsp;&nbsp;&nbsp;(procedure)
+</p>
+<p>
+<code>(raise-foreign-error <i>convention-value plist</i>)</code> &nbsp; &rarr; &nbsp; <i>undefined</i> &nbsp;&nbsp;&nbsp;(procedure)
+</p>
+<blockquote>
+<p>
+These procedures are handed a value for the convention key, and a plist,
+and return an abstract data type object.
+It is an error to pass non-symbols as keys in the plist, if the plist
+does not have an even number of elements, or if
+the <code>'convention</code> key/value pair is not in the object.
+If the plist argument is malformed, an error is signaled.  Except for
+small memory implementations, these procedures must preserve the
+malformed argument for end users as the value of
+the <code>'args</code> key.
+</p>
+<p>
+A recommended approach to handle a malformed argument is to create a
+status object with either <code>'status</code> or <code>'error</code>
+as the value of the <code>'convention</code> key, make the argument the
+value of the <code>'args</code> key, and supply an informative
+<code>'message</code>.
+</p>
+<p>
+<code>raise-foreign-error</code> constructs a <i>foreign-error-object</i>
+like <code>make-foreign-status</code>, and raises an exception in
+a manner suitable for the Scheme implementation it is running on.
+In a R6RS or R7RS system following
+<a href="https://srfi.schemers.org/srfi-35/srfi-35.html">SRFI 35</a>,
+or in a system supporting
+<a href="https://srfi.schemers.org/srfi-18/srfi-18.html">SRFI 18</a>,
+raising an exception means to call <code>raise</code> on the object.
+In a system only supporting
+<a href="https://srfi.schemers.org/srfi-23/srfi-23.html">SRFI 23</a>,
+raising an exception means calling <code>error</code> with a
+<code><i>reason</i></code> string and <code><i>irritants</i></code>
+following it.
+</p>
+<pre class="example">
+(make-foreign-status 'status '()))
+</pre>
+<pre class="example">
+  &rArr;  <i>foreign-status-object</i>
+</pre>
+<pre class="example">
+(raise-foreign-error
+  errno
+  '(number 2
+    name ENOENT
+    scheme-procedure open-file
+    foreign-interface open
+    message "open-file called open: errno/ENOENT: No such file or directory"
+    arguments ("not-a-valid-filename" 0 428)
+    heritage "SRFI 170")
+</pre>
+<pre class="example">
+  &rArr;  undefined
+</pre>
+<pre class="example">
+(make-foreign-status
+  generic-c-lib
+  '(scheme-procedure generate-key
+    foreign-interface sodium-init
+    message "generate-key: ecb-generate-key could not initialize sodium library\n")
+</pre>
+<pre class="example">
+  &rArr;  <i>foreign-status-object</i>
+</pre>
+<pre class="example">
+(raise-foreign-error 'error '()))
+</pre>
+<pre class="example">
+  &rArr;  <i>undefined</i>
+</pre>
+</blockquote>
+
+
+<h3>Standard conventions</h3>
+
+<ul>
+<li>
+<code>convention</code>:
+The only mandatory key/value pair, it is used to divide the universe
+of foreign interfaces.  For more information see the text after the
+Specification heading.
+</li>
+<li>
+<code>sub-convention</code>:
+To further subdivide large conventions such as <code>'generic-c-lib</code>.
+</li>
+<li>
+<code>scheme-procedure</code>:
+The Scheme procedure in which the status object is created.
+If there is no Scheme code interposed between the the user and a FFI,
+it can be omitted or have a value of <code>#f</code>.
+If the plist argument to create a status object is malformed, its
+value should be <code>'make-foreign-status</code>.
+</li>
+<li>
+<code>foreign-interface</code>:
+The specific part of the foreign interface that was called, and
+responded with a status.
+For a library, the name of the library function that was called
+is suggested.
+</li>
+<li>
+<code>message</code>:
+A message suitable for human understanding of an interface status.
+In the construction of the error message, implementers are encouraged
+to include relevant information from the above fields and the args
+field below.
+Implementations on small-memory systems can reasonably omit message
+strings.
+</li>
+<li>
+<code>args</code>:
+The arguments handed to the Scheme procedure in which the status
+object is created.
+For login functions, you want to omit reporting and logging plaintext
+passwords, and login names are also dangerous because users will
+sometimes accidentally enter their password first.
+For cryptographic libraries, the same for secret and private keys and
+plaintext data.
+<li>
+<code>inner</code>:
+For nesting of a lower level status object.
+</li>
+<li>
+<code>source-filename</code>:
+A string containing a filename that contained the source code that
+generated the status.
+</li>
+<li>
+<code>line-number</code>:
+The line number in the above <code>'source-filename</code> of the
+beginning of the call to <code>make-foreign-status</code> or
+<code>raise-foreign-error</code>.
+</li>
+<li>
+<code>column-number</code>:
+The column in the line-number above.
+</li>
+</ul>
+
+
+<h2>Implementation</h2>
+
+<p>
+An old Chibi Scheme sample implementation of this SRFI can be found in
+the srfi directory of the SRFI's repository, it will be updated when
+the API settles down.
+</p>
+
+
+<h2>Acknowledgments</h2>
+
+<p>
+Thanks to Olin Shivers and all the Scheme implementers who have
+followed his work; this SRFI was inspired by scsh's
+<code>errno-error</code> facility.  Thanks also to all the
+participants in the SRFI 170 and SRFI 198 mailing lists.
+</p>
+
+<h2>Copyright</h2>
+<p>Copyright &copy; 2020 John Cowan, Lassi Kortela, and Harold Ancell</p>
+
+<p>
+  Permission is hereby granted, free of charge, to any person
+  obtaining a copy of this software and associated documentation files
+  (the "Software"), to deal in the Software without restriction,
+  including without limitation the rights to use, copy, modify, merge,
+  publish, distribute, sublicense, and/or sell copies of the Software,
+  and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:</p>
+
+<p>
+  The above copyright notice and this permission notice (including the
+  next paragraph) shall be included in all copies or substantial
+  portions of the Software.</p>
+<p>
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+  BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.</p>
+
+  <hr>
+  <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address></body></html>

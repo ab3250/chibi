@@ -1,0 +1,22 @@
+* SRFI 163: Enhanced array literals
+
+** by Per Bothner
+
+
+
+keywords: [[https://srfi.schemers.org/?keywords=reader-syntax][Reader Syntax]]
+
+This repository hosts [[https://srfi.schemers.org/srfi-163/][SRFI 163]]: Enhanced array literals, a [[https://srfi.schemers.org/][Scheme Request for Implementation]].
+
+This SRFI is in /final/ status.
+
+See also [[https://srfi.schemers.org/srfi-4/][SRFI 4: Homogeneous numeric vector datatypes]], [[https://srfi.schemers.org/srfi-25/][SRFI 25: Multi-dimensional Array Primitives]], [[https://srfi.schemers.org/srfi-48/][SRFI 48: Intermediate Format Strings]], [[https://srfi.schemers.org/srfi-58/][SRFI 58: Array Notation]], [[https://srfi.schemers.org/srfi-58/][SRFI 58: Array Notation]], [[https://srfi.schemers.org/srfi-122/][SRFI 122: Nonempty Intervals and Generalized Arrays]], [[https://srfi.schemers.org/srfi-160/][SRFI 160: Homogeneous numeric vector libraries]], and [[https://srfi.schemers.org/srfi-164/][SRFI 164: Enhanced multi-dimensional Arrays]].
+
+The full documentation for this SRFI can be found in the [[https://srfi.schemers.org/srfi-163/srfi-163.html][SRFI Document]].
+
+If you'd like to participate in the discussion of this SRFI, or report issues with it, please [[https://srfi.schemers.org/srfi-163/][join the SRFI-163 mailing list]] and send your message there.
+
+Thank you.
+
+
+[[mailto:srfi-editors@srfi.schemers.org][The SRFI Editors]]

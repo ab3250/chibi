@@ -1,0 +1,7 @@
+(import (scheme base))
+(import (scheme write))
+(import (srfi 128))
+(import (chibi test))
+(import (only (scheme r5rs) exact->inexact))
+(define (print x) (display x) (newline))
+(include "shared-tests.scm")

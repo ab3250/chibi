@@ -1,0 +1,195 @@
+////////////////////////////////////////////////////////////////
+Larceny User Manual
+
+$Id$
+
+For documentation on AsciiDoc, see
+https://github.com/larcenists/larceny/wiki/AsciiDoc
+////////////////////////////////////////////////////////////////
+
+Larceny User Manual
+===================
+
+////////////////////////////////////////////////////////////////
+FIXME: This isn't needed when the backend is html5, but the
+xhtml11 backend ignores the "-a toclevels=1" option on the
+asciidoc command line.
+
+1. <<LarcenyChapter, Larceny>>
+2. <<InstallationChapter, Installing Larceny>>
+3. <<RunningChapter, Running Larceny>>
+4. <<LexicalChapter, Lexical Syntax>>
+5. <<LibrariesChapter, R7RS/R6RS Libraries>>
+6. <<NamingChapter, File Naming Conventions>>
+7. <<CompilingChapter, Compiling Files and Libraries>>
+8. <<R7rsChapter, R7RS Standard Libraries>>
+9. <<R6rsChapter, R6RS Standard Libraries>>
+10. <<LarcenyERr5rsLibrariesChapter, Larceny's R7RS/R6RS Libraries>>
+11. <<Err5rsChapter, ERR5RS Standard Libraries>>
+12. <<LarcenyR5rsLibrariesChapter, Larceny's R5RS Libraries>>
+13. <<FfiChapter, Foreign-Function Interface to C>>
+14. <<DebuggingChapter, Debugging>>
+15. <<Standards, Standards>>
+////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+[[LarcenyChapter]]
+
+Larceny
+-------
+
+Larceny
+implements the Scheme programming language
+as defined by
+the
+<<Standards, Red Edition>> of
+the
+<<Standards, Revised^7^ Report>>,
+while continuing to support
+the
+<<Standards, Revised^6^ Report>>,
+the
+<<Standards, Revised^5^ Report>>,
+and
+<<Standards, IEEE Standard 1178-1990>>.
+Those language standards serve as Larceny's primary documentation.
+
+This manual describes aspects of Larceny that are not specified
+by those standards.
+For the most current version of this manual, please see
+http://www.cesura17.net/~larcenists/Nightly/doc/[Larceny's
+online documentation page].
+For links to the Common Larceny User Manual and the Larceny
+mailing list, please visit
+http://www.larcenists.org/[Larceny's main web page].
+
+To report bugs, please send email to the Larceny
+developers at `<larceny@ccs.neu.edu>`, or submit a
+bug ticket at Larceny's
+https://github.com/larcenists/larceny[GitHub site].
+
+
+include::intro.txt[]
+
+include::running.txt[]
+
+include::lexical.txt[]
+
+include::libraries.txt[]
+
+include::naming.txt[]
+
+include::compiling.txt[]
+
+include::r7rs.txt[]
+
+include::r6rs.txt[]
+
+[[LarcenyErr5rsLibrariesChapter]]
+
+Larceny's R7RS/R6RS Libraries
+-------------------------------
+
+Larceny provides libraries for compiling
+R7RS/R6RS libraries and for timing benchmarks.
+
+include::load.txt[]
+
+include::compiler.txt[]
+
+include::benchmarking.txt[]
+
+include::recprinter.txt[]
+
+include::err5rs.txt[]
+
+[[LarcenyR5rsLibrariesChapter]]
+
+Larceny's R5RS Libraries
+------------------------
+
+The procedures described in this chapter are nonstandard.
+Some are deprecated after being rendered obsolete by R7RS
+or R6RS standard libraries.
+Others still provide useful capabilities that the standard
+libraries don't.
+
+include::strings.txt[]
+
+include::bytevectors.txt[]
+
+include::vectors.txt[]
+
+include::procedures.txt[]
+
+include::pairs_lists.txt[]
+
+include::sorting.txt[]
+
+include::records.txt[]
+
+include::io.txt[]
+
+include::os.txt[]
+
+include::fixnums.txt[]
+
+include::numbers.txt[]
+
+include::hashtable.txt[]
+
+include::parameters.txt[]
+
+include::proplist.txt[]
+
+include::symbols.txt[]
+
+include::syscontrol.txt[]
+
+include::srfi.txt[]
+
+include::slib.txt[]
+
+include::ffi.txt[]
+
+include::debugging.txt[]
+
+////////////////////////////////////////////////////////////////
+include::starting.txt[]
+////////////////////////////////////////////////////////////////
+
+[[Standards]]
+
+Standards
+---------
+
+////////////////////////////////////////////////////////////////
+include::procidx.txt[]
+////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////
+Appendices
+----------
+////////////////////////////////////////////////////////////////
+
+include::ieee-std.txt[]
+
+////////////////////////////////////////////////////////////////
+[[LarcenyNoteRepr]]
+link:../notes/note2-repr.html[]
+[[LarcenyNoteFfi]]
+link:../notes/note7-ffi.html[]
+////////////////////////////////////////////////////////////////
+
+ifdef::basebackend-docbook[]
+Index
+-----
+////////////////////////////////////////////////////////////////
+The index is normally left completely empty, its contents being
+generated automatically by the DocBook toolchain.
+////////////////////////////////////////////////////////////////
+endif::basebackend-docbook[]

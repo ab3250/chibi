@@ -1,0 +1,201 @@
+
+<html><head>
+<style type="text/css">
+body {color: #000; background-color: #FFF}
+div#menu  {font-size: smaller; position: absolute; top: 50px; left: 0; width: 190px; height: 100%}
+div#main  {position: absolute; top: 0; left: 200px; width: 540px; height: 100%}
+div#notes {position: relative; top: 2em; left: 570px; max-width: 200px; height: 0px; font-size: smaller;}
+div#footer {padding-bottom: 50px}
+.result { color: #000; background-color: #FFEADF; width: 100%; padding: 3px}
+.command { color: #000; background-color: #FFEADF; width: 100%; padding: 5px}
+.keyword { color: #800080; background-color: inherit; }
+.type { color: #008000; background-color: inherit; }
+.function { color: #0000FF; background-color: inherit; }
+.variable { color: #B8860B; background-color: inherit; }
+.comment { color: #FF0000; background-color: inherit; }
+.string { color: #BC8F8F; background-color: inherit; }
+.attribute { color: #FF5000; background-color: inherit; }
+.preprocessor { color: #FF00FF; background-color: inherit; }
+.builtin { color: #FF00FF; background-color: inherit; }
+.character { color: #0055AA; background-color: inherit; }
+.syntaxerror { color: #FF0000; background-color: inherit; }
+.diff-deleted { color: #5F2121; background-color: inherit; }
+.diff-added { color: #215F21; background-color: inherit; }
+span.paren1 { color: #AAAAAA; background-color: inherit; }
+span.paren2 { color: #888888; background-color: inherit; }
+span.paren3 { color: #666666; background-color: inherit; }
+span.paren4 { color: #444444; background-color: inherit; }
+span.paren5 { color: #222222; background-color: inherit; }
+span.paren6 { color: #000000; background-color: inherit; }
+</style>
+</head><body><ol><li><a href="#h2_Patterns">Patterns</a></li><li><a href="#h2_Syntax">Syntax</a><ol><li><a href="#h3_(matchexpr(pattern.body)...)(matchexpr(pattern(=>failure).body)...)">match</a></li><li><a href="#h3_match-lambda">match-lambda</a></li><li><a href="#h3_match-lambda*">match-lambda*</a></li><li><a href="#h3_match-let">match-let</a></li><li><a href="#h3_match-letrec">match-letrec</a></li><li><a href="#h3_(match-let*((varvalue)...)body...)">match-let*</a></li></ol></li></ol><a name="h1_(chibimatch)"></a><h1>(chibi match)</h1><p>
+A portable hygienic pattern matcher.
+This is a full superset of the popular <a href="http://www.cs.indiana.edu/scheme-repository/code.match.html">match</a>
+package by Andrew Wright, written in fully portable <code>syntax-rules</code>
+and thus preserving hygiene.
+The most notable extensions are the ability to use <em>non-linear</em>
+patterns - patterns in which the same identifier occurs multiple
+times, tail patterns after ellipsis, and the experimental tree patterns.
+</p><a name="h2_Patterns"></a><h2>Patterns</h2><p>
+Patterns are written to look like the printed representation of
+the objects they match.  The basic usage is
+<code>(match expr (pat body ...) ...)</code>
+where the result of <code>expr</code> is matched against each pattern in
+turn, and the corresponding body is evaluated for the first to
+succeed.  Thus, a list of three elements matches a list of three
+elements.
+</p><pre><code>(let ((ls (list 1 2 3))) (match ls ((1 2 3) #t)))</code></pre><code>=> #t</code><p>
+If no patterns match an error is signalled.
+Identifiers will match anything, and make the corresponding
+binding available in the body.
+</p><pre><code>(match (list 1 2 3) ((a b c) b))</code></pre><code>=> 2</code><p>
+If the same identifier occurs multiple times, the first instance
+will match anything, but subsequent instances must match a value
+which is <code>equal?</code> to the first.
+</p><pre><code>(match (list 1 2 1) ((a a b) 1) ((a b a) 2))</code></pre><code>=> 2</code><p>
+The special identifier <code>_</code> matches anything, no matter how
+many times it is used, and does not bind the result in the body.
+</p><pre><code>(match (list 1 2 1) ((_ _ b) 1) ((a b a) 2))</code></pre><code>=> 1</code><p>
+To match a literal identifier (or list or any other literal), use
+<code>quote</code>.
+</p><pre><code>(match 'a ('b 1) ('a 2))</code></pre><code>=> 2</code><p>
+Analogous to its normal usage in scheme, <code>quasiquote</code> can
+be used to quote a mostly literally matching object with selected
+parts unquoted.
+</p><pre><code>(match (list 1 2 3) (`(1 ,b ,c) (list b c)))</code></pre><code>=> (2 3)</code><p>
+Often you want to match any number of a repeated pattern.  Inside
+a list pattern you can append <code>...</code> after an element to
+match zero or more of that pattern (like a regexp Kleene star).
+</p><pre><code>(match (list 1 2) ((1 2 3 ...) #t))</code></pre><code>=> #t</code><p>
+</p><pre><code>(match (list 1 2 3) ((1 2 3 ...) #t))</code></pre><code>=> #t</code><p>
+</p><pre><code>(match (list 1 2 3 3 3) ((1 2 3 ...) #t))</code></pre><code>=> #t</code><p>
+Pattern variables matched inside the repeated pattern are bound to
+a list of each matching instance in the body.
+</p><pre><code>(match (list 1 2) ((a b c ...) c))</code></pre><code>=> ()</code><p>
+</p><pre><code>(match (list 1 2 3) ((a b c ...) c))</code></pre><code>=> (3)</code><p>
+</p><pre><code>(match (list 1 2 3 4 5) ((a b c ...) c))</code></pre><code>=> (3 4 5)</code><p>
+More than one <code>...</code> may not be used in the same list, since
+this would require exponential backtracking in the general case.
+However, <code>...</code> need not be the final element in the list,
+and may be succeeded by a fixed number of patterns.
+</p><pre><code>(match (list 1 2 3 4) ((a b c ... d e) c))</code></pre><code>=> ()</code><p>
+</p><pre><code>(match (list 1 2 3 4 5) ((a b c ... d e) c))</code></pre><code>=> (3)</code><p>
+</p><pre><code>(match (list 1 2 3 4 5 6 7) ((a b c ... d e) c))</code></pre><code>=> (3 4 5)</code><p>
+<code>___</code> is provided as an alias for <code>...</code> when it is
+inconvenient to use the ellipsis (as in a syntax-rules template).
+The <code>..1</code> syntax is exactly like the <code>...</code> except
+that it matches one or more repetitions (like a regexp "+").
+</p><pre><code>(match (list 1 2) ((a b c ..1) c))</code></pre><code>ERROR: match: "no matching pattern"
+</code><p>
+</p><pre><code>(match (list 1 2 3) ((a b c ..1) c))</code></pre><code>=> (3)</code><p>
+The boolean operators <code>and</code>, <code>or</code> and <code>not</code>
+can be used to group and negate patterns analogously to their
+Scheme counterparts.
+The <code>and</code> operator ensures that all subpatterns match.
+This operator is often used with the idiom <code>(and x pat)</code> to
+bind <code>x</code> to the entire value that matches <code>pat</code>
+(c.f. "as-patterns" in ML or Haskell).  Another common use is in
+conjunction with <code>not</code> patterns to match a general case
+with certain exceptions.
+</p><pre><code>(match 1 ((and) #t))</code></pre><code>=> #t</code><p>
+</p><pre><code>(match 1 ((and x) x))</code></pre><code>=> 1</code><p>
+</p><pre><code>(match 1 ((and x 1) x))</code></pre><code>=> 1</code><p>
+The <code>or</code> operator ensures that at least one subpattern
+matches.  If the same identifier occurs in different subpatterns,
+it is matched independently.  All identifiers from all subpatterns
+are bound if the <code>or</code> operator matches, but the binding is
+only defined for identifiers from the subpattern which matched.
+</p><pre><code>(match 1 ((or) #t) (else #f))</code></pre><code>=> #f</code><p>
+</p><pre><code>(match 1 ((or x) x))</code></pre><code>=> 1</code><p>
+</p><pre><code>(match 1 ((or x 2) x))</code></pre><code>=> 1</code><p>
+The <code>not</code> operator succeeds if the given pattern doesn't
+match.  None of the identifiers used are available in the body.
+</p><pre><code>(match 1 ((not 2) #t))</code></pre><code>=> #t</code><p>
+The more general operator <code>?</code> can be used to provide a
+predicate.  The usage is <code>(? predicate pat ...)</code> where
+<code>predicate</code> is a Scheme expression evaluating to a predicate
+called on the value to match, and any optional patterns after the
+predicate are then matched as in an <code>and</code> pattern.
+</p><pre><code>(match 1 ((? odd? x) x))</code></pre><code>=> 1</code><p>
+The field operator <code>=</code> is used to extract an arbitrary
+field and match against it.  It is useful for more complex or
+conditional destructuring that can't be more directly expressed in
+the pattern syntax.  The usage is <code>(= field pat)</code>, where
+<code>field</code> can be any expression, and should result in a
+procedure of one argument, which is applied to the value to match
+to generate a new value to match against <code>pat</code>.
+Thus the pattern <code>(and (= car x) (= cdr y))</code> is equivalent
+to <code>(x . y)</code>, except it will result in an immediate error
+if the value isn't a pair.
+</p><pre><code>(match '(1 . 2) ((= car x) x))</code></pre><code>=> 1</code><p>
+</p><pre><code>(match 4 ((= square x) x))</code></pre><code>=> 16</code><p>
+The record operator <code>$</code> is used as a concise way to match
+records defined by SRFI-9 (or SRFI-99).  The usage is
+<code>($ rtd field ...)</code>, where <code>rtd</code> should be the record
+type descriptor specified as the first argument to
+<code>define-record-type</code>, and each <code>field</code> is a subpattern
+matched against the fields of the record in order.  Not all fields
+must be present.
+</p><pre><code>(let ()
+  (define-record-type employee
+    (make-employee name title)
+    employee?
+    (name get-name)
+    (title get-title))
+  (match (make-employee "Bob" "Doctor")
+    (($ employee n t) (list t n))))
+</code></pre><code>=> ("Doctor" "Bob")</code><p>
+For records with more fields it can be helpful to match them by
+name rather than position.  For this you can use the <code>@</code>
+operator, originally a Gauche extension:
+</p><pre><code>(let ()
+  (define-record-type employee
+    (make-employee name title)
+    employee?
+    (name get-name)
+    (title get-title))
+  (match (make-employee "Bob" "Doctor")
+    ((@ employee (title t) (name n)) (list t n))))
+</code></pre><code>=> ("Doctor" "Bob")</code><p>
+The <code>set!</code> and <code>get!</code> operators are used to bind an
+identifier to the setter and getter of a field, respectively.  The
+setter is a procedure of one argument, which mutates the field to
+that argument.  The getter is a procedure of no arguments which
+returns the current value of the field.
+</p><pre><code>(let ((x (cons 1 2))) (match x ((1 . (set! s)) (s 3) x)))</code></pre><code>=> (1 . 3)</code><p>
+</p><pre><code>(match '(1 . 2) ((1 . (get! g)) (g)))</code></pre><code>=> 2</code><p>
+The new operator <code>***</code> can be used to search a tree for
+subpatterns.  A pattern of the form <code>(x *** y)</code> represents
+the subpattern <code>y</code> located somewhere in a tree where the path
+from the current object to <code>y</code> can be seen as a list of the
+form <code>(x ...)</code>.  <code>y</code> can immediately match the current
+object in which case the path is the empty list.  In a sense it's
+a 2-dimensional version of the <code>...</code> pattern.
+As a common case the pattern <code>(_ *** y)</code> can be used to
+search for <code>y</code> anywhere in a tree, regardless of the path
+used.
+</p><pre><code>(match '(a (a (a b))) ((x *** 'b) x))</code></pre><code>=> (a a a)</code><p>
+</p><pre><code>(match '(a (b) (c (d e) (f g))) ((x *** 'g) x))</code></pre><code>=> (a c f)</code><a name="h2_Syntax"></a><h2>Syntax</h2><p>
+</p><a name="h3_(matchexpr(pattern.body)...)(matchexpr(pattern(=>failure).body)...)"></a><h3><code>(match expr (pattern . body) ...)<br></br>
+(match expr (pattern (=> failure) . body) ...)</code></h3><p>
+The result of <code>expr</code> is matched against each <code>pattern</code> in
+turn, according to the pattern rules described in the previous
+section, until the the first <code>pattern</code> matches.  When a match is
+found, the corresponding <code>body</code>s are evaluated in order,
+and the result of the last expression is returned as the result
+of the entire <code>match</code>.  If a <code>failure</code> is provided,
+then it is bound to a procedure of no arguments which continues,
+processing at the next <code>pattern</code>.  If no <code>pattern</code> matches,
+an error is signalled.</p><a name="h3_match-lambda"></a><h3><code>(match-lambda (pattern . body) ...)</code></h3><p>Shortcut for <code>lambda</code> + <code>match</code>.  Creates a
+procedure of one argument, and matches that argument against each
+clause.</p><a name="h3_match-lambda*"></a><h3><code>(match-lambda* (pattern . body) ...)</code></h3><p>Similar to <code>match-lambda</code>.  Creates a procedure of any
+number of arguments, and matches the argument list against each
+clause.</p><a name="h3_match-let"></a><h3><code>(match-let ((var value) ...) . body)<br></br>(match-let loop ((var init) ...) . body)</code></h3><p>Matches each var to the corresponding expression, and evaluates
+the body with all match variables in scope.  Raises an error if
+any of the expressions fail to match.  Syntax analogous to named
+let can also be used for recursive functions which match on their
+arguments as in <code>match-lambda*</code>.</p><a name="h3_match-letrec"></a><h3><code>(match-letrec ((var value) ...) . body)</code></h3><p>Similar to <code>match-let</code>, but analogously to <code>letrec</code>
+matches and binds the variables with all match variables in scope.</p><a name="h3_(match-let*((varvalue)...)body...)"></a><h3><code>(match-let* ((var value) ...) body ...)</code></h3><p>
+Similar to <code>match-let</code>, but analogously to <code>let*</code>
+matches and binds the variables in sequence, with preceding match
+variables in scope.</p></body></html>

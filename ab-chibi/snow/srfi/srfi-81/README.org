@@ -1,0 +1,22 @@
+* SRFI 81: Port I/O
+
+** by Michael Sperber
+
+
+
+keywords: [[https://srfi.schemers.org/?keywords=i/o][I/O]]
+
+This repository hosts [[https://srfi.schemers.org/srfi-81/][SRFI 81]]: Port I/O, a [[https://srfi.schemers.org/][Scheme Request for Implementation]].
+
+This SRFI is in /withdrawn/ status.
+
+See also [[https://srfi.schemers.org/srfi-80/][SRFI 80: Stream I/O]] and [[https://srfi.schemers.org/srfi-186/][SRFI 186: Transcoders and transcoded ports]].
+
+The full documentation for this SRFI can be found in the [[https://srfi.schemers.org/srfi-81/srfi-81.html][SRFI Document]].
+
+If you'd like to participate in the discussion of this SRFI, or report issues with it, please [[https://srfi.schemers.org/srfi-81/][join the SRFI-81 mailing list]] and send your message there.
+
+Thank you.
+
+
+[[mailto:srfi-editors@srfi.schemers.org][The SRFI Editors]]

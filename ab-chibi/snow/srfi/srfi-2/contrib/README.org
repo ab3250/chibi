@@ -1,0 +1,102 @@
+The following implementations of ~and-let*~ were contributed by Marc
+Nieper-Wißkirchen.  He said, "I think you can consider the code being
+in the public domain."
+-----
+The following is a faithful implementation with ~syntax-case~ (the
+only thing it doesn't check — and doesn't have to — is that the bound
+variables are disjoint, which is most likely an error in SRFI 2 anyway
+and should be fixed there because wrong assumptions about ~let*~ were
+made there):
+
+#+begin_src scheme
+  (define-syntax and-let*
+    (lambda (stx)
+      (syntax-case stx ()
+        ((_ ())
+         #'#t)
+        ((and-let () form form* ...)
+         #'(begin form form* ...))
+        ((_ ((id expr)))
+         #'expr)
+        ((_ ((expr)))
+         #'expr)
+        ((_ (id))
+         (identifier? #'id)
+         #'id)
+        ((_ ((id expr) . claw*) . body)
+         #'(let ((id expr))
+         (and id (and-let* claw* . body))))
+        ((_ ((expr) . claw*) . body)
+         #'(and expr (and-let* claw* . body)))
+        ((_ (id . claw*) . body)
+         (identifier? #'id)
+         #'(and id (and-let* claw* . body)))
+        ((_ (claw . claw*) . body)
+         (error "invalid and-let* claw" #'claw))
+        (_
+         (error "ill-formed and-let* form" stx)))))
+#+end_src
+
+A rewrite using ~syntax-rules~ that still uses the fenders of
+~syntax-case~ is, therefore:
+
+#+begin_src scheme
+  (define-syntax and-let*
+    (syntax-rules ()
+      ((_ ())
+       #t)
+      ((and-let () form form* ...)
+       (begin form form* ...))
+      ((_ ((id expr)))
+       expr)
+      ((_ ((expr)))
+       expr)
+      ((_ (id))
+       (identifier? #'id)
+       id)
+      ((_ ((id expr) . claw*) . body)
+       (let ((id expr))
+         (and id (and-let* claw* . body))))
+      ((_ ((expr) . claw*) . body)
+       (and expr (and-let* claw* . body)))
+      ((_ (id . claw*) . body)
+       (identifier? #'id)
+       (and id (and-let* claw* . body)))
+      ((_ (claw . claw*) . body)
+       (syntax-error "invalid and-let* claw"))
+      ((_ . _)
+       (syntax-error "ill-formed and-let* form"))))
+#+end_src
+
+To get a fully portable implementation, just drop the fenders:
+
+#+begin_src scheme
+  (define-syntax and-let*
+    (syntax-rules ()
+      ((_ ())
+       #t)
+      ((and-let () form form* ...)
+       (begin form form* ...))
+      ((_ ((id expr)))
+       expr)
+      ((_ ((expr)))
+       expr)
+      ((_ (id))
+       id)
+      ((_ ((id expr) . claw*) . body)
+       (let ((id expr))
+         (and id (and-let* claw* . body))))
+      ((_ ((expr) . claw*) . body)
+       (and expr (and-let* claw* . body)))
+      ((_ (id . claw*) . body)
+       (and id (and-let* claw* . body)))
+      ((_ . _)
+       (syntax-error "ill-formed and-let* form"))))
+#+end_src
+
+This version will accept a few invalid uses of ~and-let*~ but doesn't
+change the meaning of valid programs, so it is a faithful
+implementation of ~and-let*~ as well.  If you want to signal invalid
+uses, you can do this with a bit more effort by using a helper macro
+like ~em-symbol?~ (in [[https://srfi.schemers.org/srfi-148/srfi-148.html#em-symbol?][SRFI 148]]) that portably checks whether a macro
+argument is an identifier.

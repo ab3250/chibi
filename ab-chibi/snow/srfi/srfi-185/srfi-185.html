@@ -1,0 +1,353 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html lang="en">
+  <head>
+    <title>SRFI 185: Linear adjustable-length strings</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/srfi.css" type="text/css">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png">
+    <style type="text/css">
+  div.title h1 { font-size: small; color: blue }
+  div.title { font-size: xx-large; color: blue; font-weight: bold }
+  h1 { font-size: x-large; color: blue }
+  h2 { font-size: large; color: blue }
+  /* So var inside pre gets same font as var in paragraphs. */
+  var { font-family: monospace; }
+    </style>
+  </head>
+
+<body>
+<div class="title">
+<h1>Title</h1>
+Linear adjustable-length strings
+</div>
+
+<H1>Author</H1>
+<p>John Cowan <code><a href="mailto:cowan@ccil.org">&lt;cowan@ccil.org&gt;</a></code></p>
+
+<p>Please note that much of the text and many of the examples are
+  derived from <a href="https://srfi.schemers.org/srfi-118/srfi-118.html">SRFI 118</a>
+  by Per Bothner.</p>
+
+
+<h1>Status</h1>
+
+<p>This SRFI is currently in <em>final</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+185+at+srfi+dotschemers+dot+org">srfi-185@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-185">archive</a>.</p>
+<ul>
+  <li>Received: 2020-02-23</li>
+  <li>Draft #1 published: 2020-02-24</li>
+  <li>Draft #2 published: 2020-03-09</li>
+  <li>Draft #3 published: 2020-04-16</li>
+  <li>Finalized: 2020-04-26</li>
+</ul>
+
+<h1>Abstract</h1>
+<p>
+Scheme specifies mutable fixed-length strings.
+<a href="https://srfi.schemers.org/srfi-118/srfi-118.html">SRFI 118</a>
+adds two procedures, <code>string-append!</code> and
+<code>string-replace!</code>, which allow the length of the string to change.
+This SRFI provides two linear-update versions of these procedures:
+that is, the implementation may change the string length or return a
+new string instead.
+In addition, two convenience macros are provided that make the
+procedures somewhat easier to use.
+ 
+</p><h1>Rationale</h1>
+<p>
+Historically Scheme has only supported fixed-length strings.
+Schemes that support SRFI 118 or
+<a href="https://srfi.schemers.org/srfi-140/srfi-140.html">SRFI 140</a>
+provide fixed-length immutable strings and variable-length
+mutable strings, as the usefulness of standard Scheme's fixed-length mutable strings is
+limited: the main use is for a buffer to which one incrementally
+adds more data.  So why not fold that functionality into the string API?
+That is, why can't you add just data to the end of a string?
+</p><p>
+The difficulty is that only a few Scheme implementations provide such
+strings, and therefore variable-length strings are inherently not portable.
+This SRFI provides a useful compromise that takes advantage of
+implementation-specific variable-length strings where they exist, and simulates
+them where they do not.  Note that a native implementation may well
+copy the underlying characters, and therefore is <i>not</i> necessarily
+more efficient.</p>
+
+<p>The procedures and the macros of this SRFI together provide an
+approximation of the two SRFI 118 procedures.  Direct calls to
+<code>string-append!</code> and <code>string-replace!</code> are
+compatible between the two SRFIs provided that the first argument is
+a valid place (see below).  But calls made using <code>apply</code>,
+or where the first argument is not a place, are incompatible.  In
+those cases, it is necessary to use the two procedures while
+being sure to appropriately capture the result.</p> 
+
+<p>In this SRFI the terms <i>linear</i> and <i>linear-update</i>
+are used in the sense of
+<a href="https://srfi.schemers.org/srfi-1/srfi-1.html#LinearUpdateProcedures">
+SRFI 1</a>.
+That is, they are allowed &mdash; but not required &mdash; to side-effect
+their first argument in order to construct their results.  They use the
+same <code>!</code> suffix as purely mutational procedures, because
+they must be treated by the user as mutational whether they actually
+mutate anything or not.
+In other words, any references to <var>dst</var>
+other than the result of these procedures
+must be treated as "dead" and never referred to again.
+This must be so, since you can't rely on the value passed to a
+linear-update procedure after that procedure has been called.
+
+<h1>Specification</h1>
+
+<h2>Storage model</h2>
+
+<p>Note: This section does not apply to implementations that do not support
+variable-length strings.</p>
+
+<p>In terms of the R[567]RS storage model for strings
+as described in Section 3.4 of both R5RS and R7RS,
+strings are modeled not as ordinary fixed-length strings, but as a mutable box
+(see <a href="http://srfi.schemers.org/srfi-111/srfi-111.html">SRFI
+111</a> for a discussion of boxes) that contains a fixed-length immutable string.
+Thus a variable-length string, rather than having one location per
+character as a fixed-length string does, or no locations at all as an
+fixed-length immutable string (for example, a string literal) does, has
+just a single location.  This does <i>not</i> mean that this is the
+only correct way to implement variable-length strings, but it clarifies
+reasoning about them.</p>
+
+<p>In particular, a fixed-length string whose length is zero is in
+effect immutable, as it contains no locations.  But a variable-length
+string whose current length is zero is modeled as a box containing
+an empty immutable string rather than simply a fixed-length string.
+Thus it is possible to extend it with additional characters
+by changing the location in the box.</p>
+
+<h2>Procedures</h2>
+<p>
+This SRFI provides two new procedures.  The most frequently used is likely to be
+<code>string-append-linear!</code>, while <code>string-replace-linear!</code>
+handles the general case of replacement of a substring
+with another string of possibly different length.</p>
+
+<pre>(<b>string-append-linear!</b> <var>dst</var> <var>string-or-char</var> ...)
+</pre>
+<blockquote>
+<p>
+This procedure returns a string which extends <var>dst</var> by
+appending each additional <var>string-or-char</var> (in order) to the end of <var>dst</var>.
+A character argument and a string argument of length 1 are treated exactly the same way.
+The result can either be <var>dst</var> itself or a newly allocated string.
+</p><p>
+<p>There is no requirement that this procedure execute in constant time,
+even amortised (i.e. average) constant time.
+</p>
+</blockquote>
+<pre>(<b>string-replace-linear!</b> <var>dst</var> <var>dst-start</var> <var>dst-end</var> <var>src</var> [<var>src-start</var> [<var>src-end</var>]])
+</pre>
+<blockquote>
+Returns a string which has the same characters as <var>dst</var>,
+except that the characters between
+<var>dst-start</var> and <var>dst-end</var> have been replaced
+with the characters of the string
+<var>src</var> between <var>src-start</var> and <var>src-end</var>.
+The result can either be <var>dst</var> itself or a newly allocated string.
+<p>
+The number of characters from <var>src</var> may be different than the
+number replaced in <var>dst</var>, so the result may be larger or smaller
+than the previous length of <var>dst</var>.
+The special case where <var>dst-start</var> is equal to <var>dst-end</var>
+corresponds to insertion; the case where <var>src-start</var> is equal
+to <var>src-end</var> corresponds to deletion.
+The order in which characters are copied is unspecified,
+except that if the source and destination overlap, copying takes
+place as if the source is first copied into a temporary string and
+then into the destination. (This can be achieved without allocating
+storage by making sure to copy in the correct direction in such circumstances.)
+<p>
+When <var>src</var> is a string then
+<code>(string-append-linear! <var>dst</var> <var>src</var>)</code> is equivalent to
+<code>(string-replace-linear! <var>dst</var> (string-length <var>dst</var>) (string-length <var>dst</var>) <var>src</var>)</code>.
+<p>
+<em>Note:</em>
+<a href="https://srfi.schemers.org/srfi-13/srfi-13.html">SRFI 13</a>
+and its successors have
+a non-destructive version, <code>string-replace</code>, which
+takes the arguments in the following order:
+
+<pre>
+  (string-replace <var>dst</var> <var>src</var> <var>dst-start</var> <var>dst-end</var> [<var>src-start</var> [<var>src-end</var>]])
+</pre>
+
+We adopt a different argument order here to be consistent with
+<code>string-copy!</code>, and with existing <code>string-replace!</code>
+implementations.
+</blockquote>
+<h2>Macros</h2>
+<p>
+This SRFI also provides two new convenience macros.
+The two macros are more or less equivalent to the procedures, except that the
+first argument must be a <i>place</i>.  A place is either a variable
+or a procedure application that is defined by
+<code>identifier-syntax</code> or SRFI 17
+so that it can appear as the first argument of <code>set!</code>.  An
+implementation of these macros is free to evaluate the <i>place</i>
+either once or twice, so it is an error for the place expression to
+have either side-effects or non-trivial computation.
+
+</p><pre>(<b>string-append!</b> <var>place</var> <var>string-or-char</var> ...)
+</pre>
+<blockquote>
+<p>
+This macro sets <i>place</i> to the result of invoking
+<code>(string-append-linear! <i>place</i> <i>string-or-char</i> ...)</code>.
+It returns an unspecified value.
+</p><p>
+</blockquote>
+<pre>(<b>string-replace!</b> <var>dst-place</var> <var>dst-start</var> <var>dst-end</var> <var>src</var> [<var>src-start</var> [<var>src-end</var>]])
+</pre>
+<blockquote>
+This macro sets <var>dst-place</var> to the result of applying
+<code>string-replace-linear!</code> to its arguments.
+The result is an unspecified value.
+</blockquote>
+<h2>Example</h2>
+<p>
+The following example shows how to process a string using
+<code>string-for-each</code> and incrementally <q>building</q> a result string
+using the <code>string-append!</code> macro:</p>
+<pre>(define (translate-space-to-newline str)
+  (let ((result (make-string 0)))
+    (string-for-each
+     (lambda (ch)
+       (cond ((char=? ch #\space)
+              (string-append! result #\newline))
+             ((char=? ch #\return)) ; Ignore
+             (else
+              (string-append! result ch))))
+     str)
+    result))
+</pre>
+<p><em>Usage note:</em> Compare with using string ports:</p>
+<pre>(define (translate-space-to-newline str)
+  (let ((out (open-output-string)))
+    (string-for-each
+     (lambda (ch)
+       (cond ((char=? ch #\space)
+              (write-char #\newline out))
+             ((char=? ch #\return)) ; Ignore
+             (else
+              (write-char ch out))))
+     str)
+    (get-output-string out)))
+</pre>
+<p>Using a string port in this situation is probably preferable:
+It is more portable, and you can expect decent performance in most
+implementations.  Using <code>string-append!</code> may be slightly
+more efficient on some implementations, due to lower overhead,
+but that depends on the strategy used by <code>string-append!</code>
+when the allocated buffer is too small.
+The <code>string-append-linear!</code> and <code>string-append!</code> macro
+are most useful when
+using (reading) a string is interleaved with growing it,
+or when also using <code>string-replace-linear!</code>
+or <code>string-replace!</code>.
+</blockquote>
+
+<h1>Implementation</h1>
+<p>Here is a portable implementation that always returns a new string.
+It should not be
+used on systems that provide native variable-length strings.
+It depends on having
+<a href="https://srfi.schemers.org/srfi-13/srfi-13.html">SRFI 13</a>,
+<a href="https://srfi.schemers.org/srfi-130/srfi-130.html">SRFI 130</a>,
+or <a href="https://srfi.schemers.org/srfi-152/srfi-152.html">SRFI 152</a>.
+Alternatively, implementers can copy the definition of <code>string-replace</code>
+out of any of the sample implementations of those SRFIs.
+</p>
+<pre>
+(define (string-append-linear! . args)
+  (apply string-append
+    (map (lambda (x) (if (char? x) (string x) x)) args)))
+  
+(define string-replace-linear!
+  (case-lambda
+    ((dst dst-start dst-end src)
+     (string-replace dst src dst-start dst-end 0 (string-length src)))
+    ((dst dst-start dst-end src src-start)
+     (string-replace dst src dst-start dst-end src-start (string-length src)))
+    ((dst dst-start dst-end src src-start src-end)
+     (string-replace dst src dst-start dst-end src-start src-end))))
+</pre>
+
+
+<p>If <a href="https://srfi.schemers.org/srfi-118/srfi-118.html">SRFI 118</a>
+or <a href="https://srfi.schemers.org/srfi-140/srfi-140.html">SRFI 140</a> is available,
+the implementation is even more trivial:
+</p>
+
+<pre>
+(define string-append-linear! srfi-118:string-append!)
+
+(define string-replace-linear! srfi-118:string-replace!)
+</pre>
+
+<p>Finally, here are the macros:
+
+<pre>
+(define-syntax string-append!
+  (syntax-rules ()
+    ((_ place . args)
+     (set! place (string-append-linear! place . args)))))
+
+(define-syntax string-replace!
+  (syntax-rules ()
+    ((_ place . args)
+     (set! place (string-replace-linear! place . args)))))
+</pre>
+<p>
+A native implementation is easy, assuming there is some indirection
+between the string object header and the actual stored characters.
+(This is not true in all implementations, Chicken for example.)
+Whenever the character buffer is full, it needs to be replaced with
+a bigger buffer.  If the length of the new buffer is a
+fixed multiple of the length of the old buffer then
+ <code>string-append-linear!</code> has amortized constant execution time.
+(The multiple 1.5 <a href="https://stackoverflow.com/questions/1100311/what-is-the-ideal-growth-rate-for-a-dynamically-allocated-array">seems a good choice</a>.)
+</p><p>
+If you have cheap Smalltalk-style <code>becomes:</code> (which is admittedly
+unlikely these days) then you can use that when you need to grow a string
+beyond its allocated length.
+Alternatively, a garbage collection can be invoked, which is
+what Chicken does when it must expand the bytes used to represent a UTF-8
+string as a result of replacing a character with another character
+that requires more bytes.
+
+</p><h1>Copyright</h1>
+<p>
+Copyright &copy; Per Bothner 2015, John Cowan 2019</p>
+<p>
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:</p>
+<p>
+The above copyright notice and this permission notice (including the
+next paragraph) shall be included in all copies or substantial
+portions of the Software.</p>
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
+<hr>
+<address>Author: <a href="mailto:cowan@ccil.org">John Cowan</a></address>
+    <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address>
+
+
+</body></html>

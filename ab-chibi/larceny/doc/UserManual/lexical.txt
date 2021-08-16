@@ -1,0 +1,180 @@
+[[LexicalChapter]]
+
+Lexical syntax
+--------------
+
+Larceny's default lexical syntax extends the lexical syntax
+required by the R5RS, R6RS, and R7RS <<Standards, standards>>.
+
+The R6RS forbids most lexical extensions, however, so Larceny
+provides several mechanisms for turning its lexical extensions
+on and off.
+
+
+[[FlagsSection]]
+
+Flags
+~~~~~
+
+By default, Larceny recognizes several Larceny-specific flags
+of the form permitted by the R6RS.  The flag you are most
+likely to encounter represents one of Larceny's unspecified
+values:
+
+----------------------------------------------------------------
+    #!unspecified
+----------------------------------------------------------------
+
+Certain other flags have special meanings to Larceny's
++read+ and +get-datum+ procedures.  They are described below.
+
+
+[[CaseFoldingSection]]
+
+Case-sensitivity
+~~~~~~~~~~~~~~~~
+
+By default, Larceny is case-sensitive.
+This global default can be overridden by specifying
++--foldcase+ or +--nofoldcase+ on Larceny's command line,
+or by changing the value of Larceny's +case-sensitive?+ parameter.
+
+The case-sensitivity of a particular textual input port
+is affected by reading one of the following flags from
+the port using the +read+ or +get-datum+ procedures:
+
+----------------------------------------------------------------
+    #!fold-case
+    #!no-fold-case
+----------------------------------------------------------------
+
+The `#!fold-case` flag enables case-folding on data read from
+the port by the +read+ and +get-datum+ procedures, while
+the `#!no-fold-case` flag disables case-folding.  The behavior
+established by one of these flags extends to the next such flag
+read from the port by +read+ or +get-datum+.
+
+Both `#!fold-case` and `#!no-fold-case` are treated as comments
+by Larceny's `read` and `get-datum` procedures.  (This is a change
+from Larceny v0.97.)
+
+
+[[LexicalExtensionsSection]]
+
+Lexical extensions
+~~~~~~~~~~~~~~~~~~
+
+When a port is first opened, the Larceny-specific lexical
+extensions that are accepted on the port are determined
+by Larceny's <<LexicalParametersSection,lexical parameters>>.
+
+The following flags change the case-sensitivity and lexical
+extensions on the specific port from which they are read:
+
+----------------------------------------------------------------
+    #!r7rs         ; implies #!no-fold-case, enables R7RS syntax
+    #!r6rs         ; implies #!no-fold-case, negates other flags
+    #!r5rs         ; implies #!fold-case, enables R7RS syntax
+    #!err5rs       ; enables R7RS/R6RS syntax with extensions
+    #!larceny      ; implies #!no-fold-case and #!err5rs
+----------------------------------------------------------------
+
+All of those flags are treated as comments by Larceny's `read`
+and `get-datum` procedures.  (This is a change from Larceny
+v0.97.)
+
+[NOTE]
+================================================================
+The `#!r6rs` flag is the only flag that _disables_ lexical
+extensions.  To disable R6RS lexical extensions when new ports
+are created, use the
+<<LexicalParametersSection,`read-r6rs-weirdness?` parameter>>
+described below.
+================================================================
+
+
+[[LexicalParametersSection]]
+
+Lexical parameters
+~~~~~~~~~~~~~~~~~~
+
+When given no argument, these parameters return the current
+default for some aspects of the lexical syntax that will be
+accepted on newly created input ports or written to newly
+created output ports.
+When given an argument, these procedures change the default
+as specified by the argument.
+
+The initial values of these parameters are determined by the
+`-r7r6`, `-r7`, `-r6`, or `-r5` options on Larceny's
+command line.  The `-r6` option disables non-R6RS lexical
+syntax; the `-r7`, `-r7`, and `-r5` options allow both
+R7RS and R6RS syntax.
+
+proc:case-sensitive?[args="",result="boolean"]
+proctempl:case-sensitive?[args="boolean"]
+
+If true, newly created textual input ports behave as though they
+began with `#!fold-case`.  If false, newly created textual input
+ports behave as though they began with `#!no-fold-case`.
+
+proc:read-r6rs-flags?[args="",result="boolean"]
+proctempl:read-r6rs-flags?[args="boolean"]
+
+If true, allows flags other than `#!r6rs` to be read from
+newly created ports.
+If false, flags other than `#!r6rs` raise exceptions when
+read.
+
+proc:read-r7rs-weirdness?[args="",result="boolean"]
+proctempl:read-r7rs-weirdness?[args="boolean"]
+
+If true, newly created textual input ports behave as though they
+began with `#!r7rs`, and R7RS lexical syntax will be used when
+writing external representations to newly created textual output
+ports.
+If false, R7RS-specific extensions to R5RS/R6RS lexical syntax
+may raise exceptions.
+
+proc:read-r6rs-weirdness?[args="",result="boolean"]
+proctempl:read-r6rs-weirdness?[args="boolean"]
+
+If true, allows all R6RS lexical syntax on newly created ports
+without disabling other lexical syntax on those ports (so
+newly created textual input ports _do not_ behave as though
+they began with `#!r6rs`).
+If false, R6RS-specific extensions to R5RS/R7RS lexical syntax
+may raise exceptions.
+
+If `read-r6rs-weirdness?` is true and `read-r7rs-weirdness?`
+is false, then the R6RS bytevector syntax will be used when
+writing to newly opened textual output ports.  If neither
+or both are true, then R7RS bytevector syntax will be used.
+
+proc:read-larceny-weirdness?[args="",result="boolean"]
+proctempl:read-larceny-weirdness?[args="boolean"]
+
+Determines whether newly created textual ports allow
+Larceny's usual extensions to R5RS lexical syntax.
+In addition, this parameter determines whether newly created
+ports allow +#+ as an insignificant digit, which is
+required by the R5RS but disallowed by the R6RS and not
+required by the R7RS.
+
+proc:read-traditional-weirdness?[args="",result="boolean"]
+proctempl:read-traditional-weirdness?[args="boolean"]
+
+Determines whether newly created textual ports allow
+certain lexical extensions that are deprecated in Larceny.
+
+[NOTE]
+================================================================
+The semantics of `read-larceny-weirdness?` and
+`read-traditional-weirdness?` will change over time as
+deprecated misfeatures are added or dropped in response to
+popular demand or apathy.
+For the current semantics of these parameters, please consult
+the Larceny developers' web page that describes
+https://github.com/larcenists/larceny/wiki/LexicalConversion[Larceny's
+lexical syntax].
+================================================================

@@ -1,0 +1,60 @@
+SRFI Support
+~~~~~~~~~~~~
+
+SRFIs (Scheme Requests For Implementations) describe and implement
+additional Scheme libraries. The SRFI effort is open to anyone,
+and is described at http://srfi.schemers.org[].
+
+SRFIs are numbered.  Importing SRFIs into an R7RS library or
+program is straightforward:
+
+----------------------------------------------------------------
+(import (srfi 19)
+        (srfi 27))
+----------------------------------------------------------------
+
+The R6RS forbids numbers within library names, so R6RS libraries
+and programs must import SRFI libraries using the SRFI 97 naming
+convention in which a colon precedes the number:
+
+----------------------------------------------------------------
+(import (srfi :19)
+        (srfi :27))
+----------------------------------------------------------------
+
+To test whether particular SRFIs are available, use the R7RS
+`cond-expand` feature:
+
+----------------------------------------------------------------
+(cond-expand
+ ((and (library (srfi 19))
+       (library (srfi 27)))
+  (import (srfi 19))
+  (import (srfi 27)))
+ (else ...))
+----------------------------------------------------------------
+
+`cond-expand` is not available to R6RS libraries or programs.
+
+==== Using SRFIs in R5RS mode
+
+R5RS programs can use `cond-expand` as implemented by SRFI 0,
+"Feature-based conditional expansion construct".  (SRFI 0 must
+be loaded into Larceny before it can be used; see below.)
+Larceny provides the following nonstandard key for use in SRFI 0:
+    
+----------------------------------------------------------------
+    larceny
+----------------------------------------------------------------
+
+Some SRFIs are built into Larceny's R5RS mode, but most must be
+loaded dynamically using Larceny's `require` procedure:
+
+----------------------------------------------------------------
+    > (require 'srfi-0)
+----------------------------------------------------------------
+
+In R5RS mode, Larceny does not support SRFIs numbered 99 and higher.
+
+The design documents for SRFI 0 and other SRFIs are available at
+http://srfi.schemers.org[].

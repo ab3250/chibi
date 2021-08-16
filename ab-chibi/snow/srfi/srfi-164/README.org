@@ -1,0 +1,22 @@
+* SRFI 164: Enhanced multi-dimensional Arrays
+
+** by Per Bothner
+
+
+
+keywords: [[https://srfi.schemers.org/?keywords=data-structure][Data Structure]]
+
+This repository hosts [[https://srfi.schemers.org/srfi-164/][SRFI 164]]: Enhanced multi-dimensional Arrays, a [[https://srfi.schemers.org/][Scheme Request for Implementation]].
+
+This SRFI is in /final/ status.
+
+See also [[https://srfi.schemers.org/srfi-4/][SRFI 4: Homogeneous numeric vector datatypes]], [[https://srfi.schemers.org/srfi-25/][SRFI 25: Multi-dimensional Array Primitives]], [[https://srfi.schemers.org/srfi-122/][SRFI 122: Nonempty Intervals and Generalized Arrays]], and [[https://srfi.schemers.org/srfi-163/][SRFI 163: Enhanced array literals]].
+
+The full documentation for this SRFI can be found in the [[https://srfi.schemers.org/srfi-164/srfi-164.html][SRFI Document]].
+
+If you'd like to participate in the discussion of this SRFI, or report issues with it, please [[https://srfi.schemers.org/srfi-164/][join the SRFI-164 mailing list]] and send your message there.
+
+Thank you.
+
+
+[[mailto:srfi-editors@srfi.schemers.org][The SRFI Editors]]

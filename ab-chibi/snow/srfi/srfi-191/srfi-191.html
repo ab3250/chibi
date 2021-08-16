@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+<title>SRFI 191: Procedure Arity Inspection</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="/srfi.css" type="text/css" />
+<link href="/favicon.png" rel="icon" sizes="192x192" type="image/png" />
+<style type="text/css">
+body {
+   width: 7in;
+   margin: 30pt;
+}
+.proto {
+   font-weight: bold;
+}
+</style>
+</head>
+<body>
+
+<h1>Title</h1>
+
+<p>Procedure Arity Inspection</p>
+
+<h1>Author</h1>
+
+<p>John Cowan (based on
+<a href="https://srfi.schemers.org/srfi-102/srfi-102.html">
+SRFI 102</a> by David van Horn)
+
+<h1>Status</h1>
+
+<p>This SRFI is currently in <em>withdrawn</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+191+at+srfi+dotschemers+dot+org">srfi-191@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-191">archive</a>.</p>
+<ul>
+  <li>Received: 2020-04-14</li>
+  <li>Draft #1 published: 2020-04-14</li>
+  <li>Draft #2 published: 2020-06-16</li>
+  <li>Withdrawn: 2020-07-05</li>
+</ul>
+
+<h1>Table of contents</h1>
+
+<ul>
+  <li><a href="#Abstract">Abstract</a></li>
+  <li><a href="#Issues">Issues</a></li>
+  <li><a href="#Rationale">Rationale</a></li>
+  <li><a href="#Specification">Specification</a></li>
+  <li><a href="#Implementation">Implementation</a></li>
+  <li><a href="#Acknowledgements">Acknowledgements</a></li>
+  <li><a href="#Copyright">Copyright</a></li>
+</ul>
+
+<h1><a name="Abstract">Abstract</a></h1>
+
+<p>Many Scheme systems provide mechanisms for inspecting the arity of a
+procedural value, making it a common feature, however there is no
+standard interface.  As a result there is no portable way to observe
+the arity of a procedure without actually applying it.  This
+SRFI proposes a simple interface that is consistent with existing
+Scheme systems' facilities and prior proposals.</p>
+
+<h1><a name="Rationale">Rationale</a></h1>
+
+<p>This proposal provides a single procedure that makes it
+possible to determine if a procedure 
+applied to a particular number of arguments either may accept them
+or definitely does not accept them.
+This is the first step towards being able to determine safely
+whether a procedure can safely call another procedure passed to it
+as an argument.
+Equivalent functionality is already supported in several Scheme implementations
+and it should be easy to add support in many more systems.
+This particular interface is based on an
+<a href="https://srfi-email.schemers.org/srfi-102/msg/2771967/">
+email by Kent Dybvig sent to the SRFI-102 mailing list</a>.</p>
+
+<p>Many Scheme systems provide procedure inspection facilities for
+properties other than arity, such as source code, source location, and documentation.
+This SRFI focuses solely on the ability to retrieve arity information from
+procedural values; features for retrieving other kinds of information
+from procedures are considered beyond the scope of this proposal and
+left for future SRFIs to take up.</p>
+
+<p>For the history of earlier proposals,
+see the <a href="http://srfi.schemers.org/srfi-102/srfi-102.html#Rationale">
+Rationale of SRFI 102</a>.</p>
+
+<h1><a name="Specification">Specification</a></h1>
+
+<p class="proto">
+<code>(procedure-arity-mask <em>proc</em>) &rarr; <em>exact integer</em></code>
+</p>
+
+<p>Returns an exact integer <em>n</em> such that if the implementation
+can prove that <em>proc</em> definitely cannot be called with
+<em>k</em> arguments, then the <em>k</em>th bit of <em>n</em> is 0.
+Otherwise, the <em>k</em>th bit is 1.  The 0th bit of <em>k</em>
+is the least significant bit; positive integers are left extended with
+zeros and negative integers with ones.</p>
+
+<p>The implications of this are that
+if a procedure can only be called with <em>k</em> arguments,
+then <em>n</em> = 2<sup><em>k</em></sup>.
+If a procedure can be called with <em>k</em> or more arguments,
+then <em>n</em> = -2<sup><em>k</em></sup> - 1.  In particular,
+if the procedure can be called with any number of arguments,
+then <em>n</em> = -1.  If <em>n</em> = 0,
+the procedure cannot be called at all, which should never happen.</p>
+
+<p>Most Schemes expand away <code>case-lambda</code> before
+compilation, and so such procedures will return -1.
+However, some implementations might preserve information from
+<code>case-lambda</code>.  If so,
+a procedure that accepts exactly 1, 3, or 5 arguments would return
+<em>n</em> = 2<sup>1</sup> + 2<sup>3</sup> + 2<sup>5</sup> = 42,
+whereas a procedure that accepts 0, 2, 4, or 6 or more arguments
+(which is to say, a procedure that rejects 1, 3, or 5 arguments)
+would return <em>n</em> = <code>(bitwise-not 42)</code> = -43.
+
+<h1>
+<a name="Implementation">Implementation</a>
+</h1>
+
+<p>A simple and portable sample implementation is:
+
+<pre>(define (procedure-arity-mask n) -1)</pre>
+
+<p>Since a <em>k</em>th bit of 1 means that the procedure <em>may</em> be callable
+with <em>k</em> arguments, this is completely correct (and useless).</p>
+
+<p>Racket provides a native implementation.</p>
+
+<p>An implementation on top of SRFI 102's API can be found
+in the repository of this SRFI.  It depends on the <code>bitwise-ior</code>
+procedure, which can be found in R6RS and in various SRFIs including
+<a href="http://srfi.schemers.org/srfi-151/srfi-151.html">SRFI 151</a>,
+"Integers as Bits".</p>
+
+<h1><a name="Acknowledgements">Acknowledgments</a></h1>
+<p>Here are the acknowledgements from SRFI 102:</p>
+<blockquote>
+I would like to thank Eli Barzilay, R. Kent Dybvig, Matthias
+Felleisen, Daniel P. Friedman, and Shriram Krishnamurthi for answering
+questions on the history of arity inspection in Scheme.  In
+particular, I would like to further thank R. Kent Dybvig for providing
+the analysis of why <em>not</em> to support arity inspection.  I would
+like to thank Aaron W. Hsu for providing information on Chez Scheme's
+procedure inspection facilities.  I am grateful to Michael Sperber for
+serving as SRFI editor.  Support was provided by the National Science
+Foundation under Grant #0937060 to the Computing Research Association
+for the CIFellow Project.
+</blockquote>
+
+
+<h1>
+<a name="Copyright">Copyright</a>
+</h1>
+
+<p>
+Copyright © David Van Horn 2009, John Cowan 2020.
+</p>
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+</p>
+<p>
+The above copyright notice and this permission notice (including the
+next paragraph) shall be included in all copies or substantial
+portions of the Software.
+</p>
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+</p>
+
+<hr />
+
+<address>Editor: <a href="mailto:srfi+minus+editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address>
+</body></html>

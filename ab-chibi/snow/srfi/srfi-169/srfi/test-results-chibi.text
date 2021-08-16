@@ -1,0 +1,186 @@
+Testing SRFI 169
+
+0123
+Conforming number correct!
+
+0_1_2_3
+Conforming number correct!
+
+0_123
+Conforming number correct!
+
+01_23
+Conforming number correct!
+
+012_3
+Conforming number correct!
+
++0123
+Conforming number correct!
+
++0_123
+Conforming number correct!
+
+-0123
+Conforming number correct!
+
+-0_123
+Conforming number correct!
+
+1_2_3/4_5_6_7
+Conforming number correct!
+
+12_34/5_678
+Conforming number correct!
+
+0_1_23.4_5_6
+Conforming number correct!
+
+1_2_3.5e6
+Conforming number correct!
+
+1_2e1_2
+Conforming number correct!
+
+#b10_10_10
+Conforming number correct!
+
+#o23_45_67
+Conforming number correct!
+
+#d45_67_89
+Conforming number correct!
+
+#xAB_CD_EF
+Conforming number correct!
+
+#x789_9B_C9_EF
+Conforming number correct!
+
+#x-2_0
+Conforming number correct!
+
+#o+2_345_6
+Conforming number correct!
+
+======================================================================
+
+_0123
+Non-conforming number caused read error
+
+0123_
+Non-conforming number caused read error
+
+0123__
+Non-conforming number caused read error
+
+01__23
+Non-conforming number caused read error
+
+0_1__2___3
+Non-conforming number caused read error
+
++_0123
+Non-conforming number caused read error
+
++0123_
+Non-conforming number caused read error
+
+-_0123
+Non-conforming number caused read error
+
+-0123_
+Non-conforming number caused read error
+
+1_2_3/_4_5_6_7
+Non-conforming number caused read error
+
+_12_34/5_678
+Non-conforming number caused read error
+
+_0123.456
+Non-conforming number caused read error
+
+0123_.456
+Non-conforming number caused read error
+
+0123._456
+Non-conforming number caused read error
+
+0123.456_
+Non-conforming number caused read error
+
+123_.5e6
+Non-conforming number caused read error
+
+123._5e6
+Non-conforming number caused read error
+
+123.5_e6
+Non-conforming number caused read error
+
+123.5e_6
+Non-conforming number caused read error
+
+123.5e6_
+Non-conforming number caused read error
+
+12_e12
+Non-conforming number caused read error
+
+12e_12
+Non-conforming number caused read error
+
+12e12_
+Non-conforming number caused read error
+
+-12_3.0_00_00-12_34.56_78_i
+Non-conforming number caused read error
+
+-12_3.0_00_00-12_34.56_78i_
+Non-conforming number caused read error
+
+-12_3.0_00_00_@-12_34.56_78
+Non-conforming number caused read error
+
+-12_3.0_00_00@_-12_34.56_78
+Non-conforming number caused read error
+
+1_0_+2_0i-3_0j+4_0k
+Non-conforming number caused read error
+
+1_0+2_0_i-3_0j+4_0k
+Non-conforming number caused read error
+
+1_0+2_0i-3_0j_+4_0k
+Non-conforming number caused read error
+
+1_0+2_0i-3_0j+4_0k_
+Non-conforming number caused read error
+
+123_456_cm^2
+Non-conforming number caused read error
+
+123_456.78_cm^2
+Non-conforming number caused read error
+
+#x-_2
+Non-conforming number caused read error
+
+_#x-_2
+Non-conforming number caused read error
+
+#d_45_67_89
+Non-conforming number caused read error
+
+#e_45/67_89
+Non-conforming number caused read error
+
+#i#o_1234
+Non-conforming number caused read error
+
+#i_#o_1234
+Non-conforming number caused read error
+
+#e#x1234_
+Non-conforming number caused read error

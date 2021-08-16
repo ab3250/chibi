@@ -1,0 +1,36 @@
+# SRFI 175 implementation
+
+To compile the code:
+
+    ./compile-$x.sh
+
+To run the code in an interpreter:
+
+    ./run-$x.sh tests
+    ./run-$x.sh examples
+
+The tests produce no output if they pass. Any failed tests are
+reported on standard output.
+
+Before using a R6RS Scheme, set up compatibility shims with:
+
+    ./r6rs-symbolic-links.sh
+
+The library filenames required by many R6RS implementations are so
+exotic that I did not commit them into version control, opting for
+that script instead. On an OS that does not support symbolic links,
+you can manually copy the files linked by that script into the right
+locations.
+
+If you edit the R7RS code, you can auto-convert it to R6RS:
+
+    chibi-scheme r7rs-to-r6rs.scm
+
+You can also run the converter in another R7RS Scheme, but the output
+may not be pretty-printed.
+
+Vicare does not flush its output ports before exiting, so you need
+
+    (flush-output-port (current-output-port))
+
+at the end of tests.sps and examples.sps.

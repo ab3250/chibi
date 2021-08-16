@@ -1,0 +1,2 @@
+This directory contains implementations and tests for SRFI 39 provided
+by people other than Marc Feeley, the author of the SRFI.

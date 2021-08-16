@@ -1,0 +1,24 @@
+* SRFI 186: Transcoders and transcoded ports
+
+** by John Cowan
+
+Based on R6RS.
+
+
+
+keywords: [[https://srfi.schemers.org/?keywords=i/o][I/O]]
+
+This repository hosts [[https://srfi.schemers.org/srfi-186/][SRFI 186]]: Transcoders and transcoded ports, a [[https://srfi.schemers.org/][Scheme Request for Implementation]].
+
+This SRFI is in /final/ status.
+
+See also [[https://srfi.schemers.org/srfi-80/][SRFI 80: Stream I/O]], [[https://srfi.schemers.org/srfi-81/][SRFI 81: Port I/O]], and [[https://srfi.schemers.org/srfi-181/][SRFI 181: Custom ports (including transcoded ports)]].
+
+The full documentation for this SRFI can be found in the [[https://srfi.schemers.org/srfi-186/srfi-186.html][SRFI Document]].
+
+If you'd like to participate in the discussion of this SRFI, or report issues with it, please [[https://srfi.schemers.org/srfi-186/][join the SRFI-186 mailing list]] and send your message there.
+
+Thank you.
+
+
+[[mailto:srfi-editors@srfi.schemers.org][The SRFI Editors]]
