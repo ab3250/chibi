@@ -1,0 +1,69 @@
+This is GNU Mcron, a tool to run jobs at scheduled times.  It is a complete
+replacement for Vixie cron.  Besides supporting the traditional Vixie syntax
+for its configuration files, GNU Mcron offers the possibility to define jobs
+using the Scheme language.
+
+See the INSTALL file for generic information about how to configure and
+install GNU Mcron.  If this file is not present, see HACKING for
+preliminary build instructions.
+
+----------------------------------------------------------------------
+IMPORTANT NOTICES
+
+Do not (yet) install this software on a machine which relies for its
+functioning on its current set of crontabs.
+
+To not replace the cron daemon on a system, the package must be installed
+with the --disable-multi-user configure option.
+
+Before installing this package for the first time, it is necessary to terminate
+any running cron daemons on your system. If your old cron is not Vixie or
+accurately Vixie compatible (files in /var/cron/tabs*, /var/cron/allow,
+/var/cron/deny, /etc/crontab, /var/run/cron.pid) then you will need to clear out
+all old crontabs and make new ones afresh - or else look very carefully at the
+options you pass to the package configure script, as follows.
+
+It is often the case that GNU/Linux distributions and other Unices hacked the
+cron daemon to use different directories to those above. You can use configure
+options --spool-dir, --socket-file, --allow-file, --deny-file, --pid-file and
+--tmp-dir to make mcron behave similarly. Note that, with the exception of
+tmp-dir, none of these files or directories should be accessible by ordinary
+(non-root) users.
+
+If your old cron is Vixie, or very similar, mcron should fall right into place
+where your old cron was (the binaries cron and crontab will be replaced, but if
+your existing system has a binary called crond, you should make this a link
+to mcron), and you should be able to continue to use your existing crontabs
+without noticing any changes.
+
+If you don't want to clobber your existing cron executables, you can specify
+the --program-prefix option to configure with a prefix ending in a
+non-alphabetic character, for example "m.", and then run the programs as
+m.mcron, m.cron (or m.crond) and m.crontab.
+----------------------------------------------------------------------
+
+
+After compilation, read the info file for full instructions for use (typing
+'info -f doc/mcron.info' at the command line should suffice).  Notes for end
+users, sysadmins, and developers who wish to incorporate mcron into their own
+programs are included here.
+
+Features which might be implemented sometime sooner or later are noted in the
+TODO file.
+
+Please send all other bug reports to bug-mcron@gnu.org.
+
+Mcron is free software. See the file COPYING for copying conditions.
+
+The mcron development home page is at http://www.gnu.org/software/mcron, and it
+can be obtained from ftp://ftp.gnu.org/pub/gnu/mcron.
+
+-----
+
+Copyright © 2003, 2005, 2006, 2012, 2014 Dale Mellor
+Copyright © 2018 Mathieu Lirzin
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.  This file is offered as-is,
+without warranty of any kind.

@@ -1,0 +1,303 @@
+Instructions to rebuild cyclone after changing string_type returns to object returns:
+shouldn't it just be a matter of compiling cgen and dumping that and the includes/libs into bootstrap??
+;sudo ls ; cyclone  scheme/cyclone/cgen.sld && sudo cp scheme/cyclone/cgen.* /usr/local/share/cyclone/scheme/cyclone/
+;make clean ; make && sudo make install
+;sudo make install-includes
+;cp ../cyclone-bootstrap/dispatch.c .
+;make libcyclone.a
+;sudo make install-libs
+;make clean ; make && sudo make install
+at this point, cyclone crashes when compiling the test suite. I think there may be a problem with there being a disconnect between the old/new versions of compiled code, runtime libs, etc. however, the generated c files have the change. so it should be possible to bootstrap using them...
+
+
+Roadmap:
+ - Make it easier to work with multiple copies of cyclone. for example, maybe an env variable could be used to point a local copy of cyclone to the current directory for resources, instead of /usr/local/
+ - Add macro support, ideally including some level of hygiene
+ - Code cleanup - need to take care of accumulated cruft before release. also, can we profile to make things any faster?
+ - Target r7rs support (coordinate with feature list)
+ - User manual (or at least API docs, features page may be a good 1st step)
+ - Investigate native thread support. see notes at the end of this file
+
+Working TODO list. should start creating issues for these to get them out of here:
+
+ - clean up runtime
+   - remove unused runtime globals, rename others to make more sense
+   - need multiple closure types? maybe just migrate closureN to closure?
+   - remove unused code, old comments, etc
+   - clean up runtime-main.h
+
+ - macros
+   - next steps:
+     - added notes to macros.sld module for how ex rename/compare should work. check working implementations, papers. find test cases that cyclone does not handle right now
+       next step is to work through implementing these notes
+
+     - review 4 cases below for handling macro expansion. I think there are still some outstanding issues
+       with respect to eval'd macros
+     - check chibi's syntax-rules
+     - macros within macros, 4 cases:
+       - compiled macro within compiled macro - expands fine, a lot of the built-in macros in scheme/base do this
+       - eval'd macro within compiled macro - ??
+       - compiled macro within eval'd macro - works fine
+       - eval'd macro within eval'd macro - does not work yet, see test2.scm. would need to be able to add macros to an eval env so they can be seen by subsequent macros that use them
+     - *defined-macros* is redundant now with the list in the macros module, except for appending macros from meta files. should pick one list (probably module one) and consolidate
+
+   * thought: if we go with meta files, the compiler can revert back
+     to using compiled macros if we do not install the meta files.
+     just an idea, may be a hack or not feasible. not an awful idea to
+     make them optional though, with some restrictions.
+
+   how should eval deal with compiled macros?
+   do we need a new tag type, eg: macro closure or such?
+   then eval could say, if app macro, expand it and call analyze again
+   may want to branch and experiment with this approach.
+   or just add hooks, then experiment with it in eval...
+
+
+   can start by adding define-syntax? section to transforms.scm.
+   need to think about how macros from sld's will end up being
+   loaded though. do we need to emit .meta files or such?
+
+   how to load macros
+  1- in same file, at compile time - works now with define-syntax
+        there may be an issue here with top-level define's containing a macro that
+        is contained in a top-level define-syntax listed after the define
+  2- in same file, at runtime - would need to compile as a function, and mark somehow at runtime
+        keep in mind macro expansion is only done via eval, so eval would need to have
+        access to the compiled macros at runtime. with ER macros, it is very preferable
+        for the macros to be compiled C functions
+        * how do macros get into the global environment?
+
+first, macros have to be converted to functions and compiled to even be available at runtime.
+there will probably need to be a table of macros loaded at init time. the (macro?) function 
+and others would use this table, much like they does now with *defined-macros*
+
+each macro needs to tie a symbol (eg: 'let) to a compiled C function (or a closure??)
+
+can we guarantee all libs are initiated before global environment?
+
+  3- in library at compile time - how to load these??? do we need a ".meta" file or such???
+      * basically the issue is we are compiling a file that references a macro in a library.
+        the library is available as a .o and a .sld file at this point. but:
+          a) how do we know an exported object is a macro, and
+          b) how do we get the macro function (either compiled or as a scheme AST)?
+
+        one possible solution is to emit an intermediate file containing a list of
+        macros, like *defined-macros*.
+
+on the other hand, how is this going to work when compiling cyclone? obviously want the
+compiler to use compiled functions as much as possible. if there is a naming conflict
+can it just use the compiled one by default? don't want cyclone eval'ing functions
+when it does not have to, and slowing down compilation even more
+
+      Previous notes:
+      * library is compiled, but how to know what the macros are, and how to access them?
+        could emit a meta file that contains the macro identifiers and either their body
+        or a way to access them in the obj file (may not be possible/portable)
+  4- in library at runtime - if marked as macro, could run function (should be nice and fast)
+     assume this would be done in the same manner (or similar) to (2).
+   - anything else?
+
+
+ - need to speed up the compilation cycle
+   switch to using shared libraries instead of static ones?
+
+ - profile cyclone code, see if there are any bottlenecks we can reduce
+   EG: prof cyclone transforms.sld
+
+ - self-hosting, there are a lot of accumulated TODO's that need to be addressed
+
+   - adding r7rs support
+     - review other sections from the report
+
+   - improved error handling:
+     - param count checks
+       if a primitive is called directly, shouldn't it be possible to check arg count?
+       is what we have now robust enough to prevent segfaults?
+
+     - type checking
+       done for now, check performance compiling transforms.sld
+
+     2) Need to either allow code to read an import after macro expansion, or have another main module for self-hosting
+
+   - I/O
+     - may be able to use fmemopen to implement output strings, although it is not supported on windows
+
+   - what else? there must be more stuff
+
+ - Reduction in size of generated code
+   is there anything we can do?
+   are closures being packed/unpacked unnecessarily?
+
+   right now, bundling this with below and attempting to optimize CPS conversion process to generate less code
+
+ - Compiler efficiency
+
+ Is there a more efficient way to CPS convert expressions? for example, can these primitive applications be inlined, instead of creating wrapping lambdas?
+
+#;10> (cps-convert '(+ 1 (+ 2 2) (+ 3 3)))
+ ((lambda (r$632) ((lambda (r$633) (%halt (+ 1 r$632 r$633))) (+ 3 3))) (+ 2 2))
+
+ yes, but what can we do when a function is applied to more than just literals? are there still opportunities for optimization?
+ may need to look through icyc.c for examples
+
+ Are there instances where full CPS is not needed, and multiple expressions can be contained within a single lambda?
+
+ - Simple idea about local variable elimination:
+
+ http://www.pvk.ca/Blog/2012/02/19/fixed-points-and-strike-mandates/
+
+ - String support
+   issue is how to support strings themselves in memory. can add them directly to the string_type, but then apply won't work 
+   because it could return an unknown number of bytes. on the other hand could use a separate data heap that is mirrored during GC.
+   may need some extra buffer for that because technically it could overflow any time a new string is allocated, not just during
+   function calls. but this would work for apply as well as everything else, I believe. obviously it makes GC a bit harder because
+   there is another pair of heaps to deal with. but all that would be done is that strings from heap A would be copied to B during GC.
+   GC would need to keep track of a pointer to each one. Sounds straightforward, but have to be careful of complications.
+   Initial plan:
+    - Add two "data" heap sections, and vars for each (head ptr, pos ptr [active only?], size)
+    - Allocate string on active data heap via make_string
+    - Initiate GC when stack exceeded or data heap under certain threshold
+    - Need adequate extra space in data heap (100K? make config), since we only check it upon function call
+    - Need to update GC to copy strings to other heap
+    - Wait, this is broken if anything is pointing to one of these strings, since memory location changes upon GC!
+      Is that a fatal issue? How to handle? could write string operations such that any operate on copies of
+      strings rather than pointing to another string. not nearly as efficient but avoids this problem. could revisit
+      other solutions down the road.
+    - Anything else? Probably want to branch for this development, just in case there are complications
+
+  COMPLICATION - only need to memcpy strings on data heap during a major collection. during a minor collection the strings are already where they need to be
+  need to fully-implement this in the runtime by passing minor/major flag to transport
+
+  TODO: trigger GC if data heap too low
+  TODO: once this works but before moving all, consolidate all this in docs/strings.txt or such. would be useful to keep these notes
+
+- Think about consoldating list of primitives in (prim?) and (c-compile-prim?). should also include other information such as number of args (or variable args), for error handling.
+
+- Notes on implementing variables
+
+ * lexical addressing (see chapter 5 of SICP) can be used to find a variable in recursive env's, so you can access it directly instead of having to recursively traverse environments.
+
+- Question about closures and continuations:
+ Presumably every function will recieve a closure. Do we have to differentiate between continuation (which every
+ function must have) and closure (which can be empty if no fv)? right now the MTA runtime combines the two by
+ having an fn argument to each closure. Is that OK?
+
+- keeping this in here, should mention this in the 'how this works' doc:
+GC - notes from: http://www.more-magic.net/posts/internals-gc.html
+
+ JAE - Good notes here about mutations (use write barrier to keep track of changes, EG: vector-set!). remember changes so they can be handled properly during next GC:
+
+ Another major oversight is the assumption that objects can only point from the stack into the heap. If Scheme was a purely functional language, this would be entirely accurate: new objects can refer to old objects, but there is no way that a preexisting object can be made to refer to a newly created object. For that, you need to support mutation.
+ But Scheme does support mutation! So what happens when you use vector-set! to store a newly created, stack-allocated value in an old, heap-allocated vector? If we used the above algorithm, the newly created element would either be part of the live set and get copied, but the vector's pointer would not be updated, or it wouldn't be part of the live set and the object would be lost in the stack reset.
+ The answer to this problem is also pretty simple: we add a so-called write barrier. Whenever a value is written to an object, it is remembered. Then, when performing a GC, these remembered values are considered to be part of the live set, just like the addresses in the saved call. This is also the reason CHICKEN always shows the number of mutations when you're asking for GC statistics: mutation may slow down a program because GCs might take longer.
+
+ JAE - Important point, that the heap must be reallocated during a major GC if there is too much data in the stack / old heap. Considered this but not sure if cyclone's GC does that right now:
+
+The smart reader might have noticed a small problem here: what if the amount of garbage cleaned up is less than the data on the stack? Then, the stack data can't be copied to the new heap because it simply is too small. Well, this is when a third GC mode is triggered: a reallocating GC. This causes a new heap to be allocated, twice as big as the current heap. This is also split in from- and tospace. Then, Cheney's algorithm is performed on the old heap's fromspace, using one half of the new heap as tospace. When it's finished, the new tospace is called fromspace, and the other half of the new heap is called tospace. Then, the old heap is de-allocated.
+
+
+
+
+
+- Notes on native threads
+
+WRT chicken, felix has this to say:
+
+----
+Native threads are not supported for two reasons. One, the runtime system is not reentrant. Two, concurrency implemented properly would require mandatory locking of every object that could be potentially shared between two threads. The garbage-collection algorithm would then become much more complex and inefficient, since the location of every object has to be accessed via a thread synchronization protocol. Such a design would make native threads in Chicken essentially equivalent to Unix processes and shared memory.
+----
+
+my notes:
+--------
+I believe .NET pauses all threads before performing GC, performs GC, then starts them back up? could something like that make GC any more efficient?
+may be a problem pausing a thread in the middle of a function though, because addresses could change after GC (??). maybe we check for GC and if ready set a flag and 
+pause the thread (block on a mutex or something). have all the other threads check and stop as well (they would see the flag set and block). once all have blocked, do GC and 
+resume all threads. some issues:
+ - might be a lot of overhead with stopping all threads when really only one of them is running low on stack space. do we GC all of the stacks, then? or just the one in trouble?
+ - how to handle calling into C code, especially code that blocks???
+   this is the core problem....
+
+how to make runtime reentrant??
+
+would still probably have to lock each object that could be accessed between threads though, so there could be a large non-GC overhead to adding thread support.
+Well, not necessarily. need to lock any object shared behind the scenes, yes. but anything that could be accessed in user code, just give the user mutexes, etc and let them worry about syncronization
+
+GC becomes more compilcated because each thread has its own stack.
+
+so, each thread has separate GC cont/args, then? each one must longjmp back to the bottom of its stack, too, I believe?
+
+ideally would want to be able to build the compiler in single-threaded and threaded modes, to be able to measure the overhead
+--------
+
+Overall Approach:
+
+Detecting GC:
+- When a thread is ready for GC, stop it and wait on event (actual sync primitive TBD)
+- When another thread checks for GC, have it wait on the event also
+- Keep doing this until a thread detects it is the last one not waiting on event or blocking in C code. Have it initiate GC
+
+TODO: Is there a race condition here, though? What if the last thread calls into C before checking for GC? may also need to check GC before calling C code (and is there still a race condition there?)
+
+During GC:
+- GC initial thread's stack.
+- Potentially GC other thread stacks if they are not in C calls
+- Cannot GC stack of a thread in C, for obvious reasons (may be actively running, etc)
+
+After GC is done:
+- Reset event, let threads execute again
+- Need to longjmp any threads that had their stacks GC'd
+
+To handle threads executing C code, that may be blocking:
+- Set a flag when going into a potentially blocking C function. (any C function?)
+- After exiting C function (back in runtime code), wait on event if GC is active. need to do this only using synchronization primitives to prevent race conditions
+
+Limitations:
+- C code cannot manipulate objects that are not on its stack
+- Windows "events" are not available in linux/pthreads. how to actually implement this behavior??
+  may be able to use condition variables. read up on that and update above to use them (so spec above can more closely follow likely implementation)
+
+more thoughts:
+ - instead of using single lock across all threads, which could involve a lot of contention, think about locking each thread's var instead. the var would only be locked by the thread or by another thread when GC is requested. this should minimize contention, and may allow pthread mutexes to be acceptable, since they generally use a fast lock (such as futex on linux) when there is no contention.
+ - sucks to have to use a lock (even a futex) whenever calling a C function primitive. Is there any way at all around it though?
+  maybe only do it certain times:
+   - when calling a known blocking function, use futex to register thread as blocking
+   - make API for this available in runtime, for 3rd party FFI at a later time
+
+ - have to be able to handle forwarding pointers in the case where a C function prim was blocking while GC was being performed, and missed it
+
+   thread may be blocked for an extended period of time due to:
+     - waiting for blocking I/O to become available
+     - mutex lock (from scheme layer or runtime. likely a short wait in the latter case)
+     - ??
+
+   how to handle case where a mutex lock blocked a thread?
+   may need to check for GC after mutex is released, because objects
+   might have been collected while the thread was blocked. although, this
+   might be mitigated somewhat by mutex calls from the scheme side
+
+   bigger issue, how to handle major collection when threads might be blocked?
+   objects forwarded once can be  handled I think (you have the fwd address)
+   but if an object is forwarded twice the fwd address is no longer valid.
+
+   is it possible for a collection to inspect the stack of a blocked thread
+   and update forwarding addresses??
+
+   *should take some examples from compiled code and work through how the GC
+   would need to work to handle a C primitive blocking for an unknown
+   amount of time.
+
+ - how could this possibly scale to hundreds/thousands of threads if a single thread's GC stops the world?
+   maybe the sweet spot is fewer threads?
+   maybe it will work anyway, just less optimal after a certain point (see .net gc, not sure how well that scales though)
+   maybe there is a way to make GC more efficient, or GC one thread at a time (not sure that is viable)?
+   Baker does have another paper on realtime GC, maybe those concepts can be applied
+
+See:
+- http://comments.gmane.org/gmane.lisp.scheme.chicken/17683
+- http://www.cs.technion.ac.il/~erez/Papers/real-time-pldi.pdf
+- http://www.cs.technion.ac.il/~erez/Papers/stopless.pdf
+
+Final thought on native threads - need to move all of this into a separate document and consolidate it to determine if a viable design can be achieved.
+
+
+

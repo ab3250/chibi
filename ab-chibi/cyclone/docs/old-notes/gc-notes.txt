@@ -1,0 +1,285 @@
+Phase 1 (gc-dev) - Add gc.h, make sure it compiles.
+Phase 2 (gc-dev2) - Change how strings are allocated, to clean up the code and be compatible with a new GC algorithm.
+Phase 3 (gc-dev3) - Change from using a Cheney-style copying collector to a naive mark&sweep algorithm.
+Phase 4 (gc-dev4) - Integrating new tracing GC algorithm, added new thread data argument to runtime.
+Phase 5 (gc-dev5) - Require pthreads library, stand cyclone back up using new GC algorithm.
+Phase 6 (gc-dev6) - Multiple mutators (application threads)
+Phase 7 (TBD) - Sharing of variables between threads (ideally without limitation, but that might not be realistic)
+
+TODO:
+- will probably need to lock shared resources such as I/O...
+  Yes, anything global needs to be considered.
+  These will certainly need to change:
+  - read.sld in-port-table - obvious thread safety issue here
+      what is the performance impact of adding locks to all these funcs?
+      or do we need to rewrite the code somehow?
+  - start making core stuff thread safe
+  - assume I/O and eval both have threading issues
+  - eval.sld - ...
+- In conjunction with above, write more programs that use multiple threads
+  - simple multithreaded example such as producer/consumer
+  - find at least one more algorithm that can be parallelized
+- revisit features list, issues list, etc
+
+DONE:
+- need to cooperate when a mutator is blocked
+ IMPLEMENTATION NOTES:
+
+ these become gc_cont and gc_args, so we need them for the wrapper:
+     GC(td,cfn,buf,1); return;
+ also need the result of the primitive, although that obviously is not
+ available until after it finishes blocking. will just have to live with that
+ constraint.
+
+ requirements:
+  - collector detects initiates async transition
+  - collector will need to perform a minor GC instead of this mutator
+    will need to pass in top of stack then, since collector won't have that.
+    can use address of continuation, if we can guarantee it will always be
+    allocated on the stack prior to wrapper call. or can just let the wrapper
+    do it, and stash it somewhere collector can get to it
+  - collector must set flag immediately to let mutator know what happened
+  - mutator must know when the transition occurs, and wait for it to finish
+  - can use mutator lock
+
+  will cont always be called via closcall1?
+  maybe we need to require prim accepts cont as an arg. might simplify
+  calling the wrapper.
+
+  then instead of a wrapper, the prim can call functions to set initial state and cleanup. it already does this to set thread state, so this isn't that big of a change (just call 2 other functions):
+
+  before_blocking {
+    set thread state ==> BLOCKING
+    set thd->gc_cont to cont, in case collector needs to use it
+    set stack_top to new field in "thd", again in case collector needs it
+      OR NOT, I think we can use stack_limit for this, to define the
+      range of stack addresses
+  }
+
+  after_blocking {
+    set thread state ==> RUNNABLE
+    check async flag
+    if set:
+      wait for thd->lock
+      unset async flag
+      transport result to heap, if necessary (not a value type)
+      set gc_args[0] to result
+      longjmp. assumes gc_cont already set by collector
+    else:
+      call into cont with result, just like today (see Cyc_io_read_line)
+  }
+
+ OLDER NOTES:
+  might be able to stop a thread and do a minor GC on it, but no longjmp until after major GC.
+  would need to figure out how to repack gc_cont and args
+  optionally, some primitives can accept a cont, how to handle? I guess we would have to 
+  call the primitive with a wrapper instead of the real cont.
+  worse, how to handle args to a possibly blocking cont? maybe use some kind of proxy
+  objects? do these primitives need to use a read barrier?? ideally want low overhead...
+
+  at the end of the day, obviously need to use a wrapper function to call the primitive,
+  instead of calling it directly.
+
+  how to stop a thread? suppose mutator would set a member in thread data (need to mutex/atomic
+  that, and be careful about doing that for any shared members), and mutator would need to
+  lock somehow if that is set upon return.
+
+  bottom line, only have to worry about this when calling potentially-blocking primitives.
+  and if one is blocked when collector is active, then need the collector to cooperate
+  instead of the blocked mutator. overally this seems do-able, though there are many details
+  to consider.
+
+- how to share variables between threads?
+  obviously need to use mutexes (on the application side) to handle access.
+  but how to handle the case where an object from one thread is added to
+  a list that belongs to another (IE, queueing an object)? because the
+  other thread's object might be added as a stack object.
+
+  keep in mind referenced obj may be a list or such that contains many other
+  refs to stack objects on another thread
+
+  how can a variable be shared? - cons, vector, set!, define (?), set-car, set-cdr
+  can we detect if there will be a problem?
+  * adding var to something in this thread - can tell that obj is red and not on this stack
+  * modifying list on another thread - if list is on heap, how do we know the 'owning' thread is 
+    not this one? we would have no idea
+
+  very concerned about how to make this work
+
+  since we only need a minor GC to put the var in the heap, might be able to add a function to trigger a minor GC. could call this function, then it would be safe to move a var to another thread (I think).
+
+  might also need to expose a function that would determine whether any given object lives on the stack, and which thread it is on (or at least, if it belongs to the current one).
+
+  neither is ideal, but might make the whole thing workable. ideally application code would not need to know about stack vs heap
+
+  this feature might end up being gc-dev7 (possibly the final phase)
+
+ORIGINAL notes migrated here from gc.c:
+/*
+Rough plan for how to implement new GC algorithm. We need to do this in
+phases in order to have any hope of getting everything working. Let's prove
+the algorithm out, then extend support to multiple mutators if everything
+looks good.
+
+PHASE 1 - separation of mutator and collector into separate threads
+
+need to syncronize access (preferably via atomics) for anything shared between the 
+collector and mutator threads.
+
+can cooperate be part of a minor gc? in that case, the 
+marking could be done as part of allocation
+
+but then what exactly does that mean, to mark gray? because
+objects moved to the heap will be set to mark color at that 
+point (until collector thread finishes). but would want
+objects on the heap referenced by them to be traced, so 
+I suppose that is the purpose of the gray, to indicate
+those still need to be traced. but need to think this through,
+do we need the markbuffer and last read/write? do those make
+  sense with mta approach (assume so)???
+
+ONLY CONCERN - what happens if an object on the stack 
+has a reference to an object on the heap that is collected?
+but how would this happen? collector marks global roots before
+telling mutators to go to async, and once mutators go async
+any allocations will not be collected. also once collectors go
+async they have a chance to markgray, which will include the write
+barrier. so given that, is it still possible for an old heap ref to 
+sneak into a stack object during the async phase?
+
+more questions on above point:
+- figure out how/if after cooperation/async, can a stack object pick
+  up a reference to a heap object that will be collected during that GC cycle?
+  need to be able to prevent this somehow...
+
+- need to figure out real world use case(s) where this could happen, to try and
+  figure out how to address this problem
+
+from my understanding of the paper, the write barrier prevents this. consider, at the
+start of async, the mutator's roots, global roots, and anything on the write barrier
+have been marked. any new objects will be allocated as marked. that way, anything the
+mutator could later access is either marked or will be after tracing. the only exception
+is if the mutator changes a reference such that tracing will no longer find an object.
+but the write barrier prevents this - during tracing a heap update causes the old
+object to be marked as well. so it will eventually be traced, and there should be no
+dangling objects after GC completes.
+
+PHASE 2 - multi-threaded mutator (IE, more than one stack thread):
+
+- how does the collector handle stack objects that reference objects from 
+  another thread's stack?
+  * minor GC will only relocate that thread's objects, so another thread's would not
+    be moved. however, if another thread references one of the GC'd thread's
+    stack objects, it will now get a forwarding pointer. even worse, what if the
+    other thread is blocked and the reference becomes corrupt due to the stack
+    longjmp? there are major issues with one thread referencing another thread's
+    objects.
+  * had considered adding a stack bit to the object header. if we do this and
+    initialize it during object creation, a thread could in theory detect
+    if an object belongs to another thread. but it might be expensive because
+    a read barrier would have to be used to check the object's stack bit and
+    address (to see if it is on this heap).
+  * alternatively, how would one thread pick up a reference to another one's
+    objects? are there any ways to detect these events and deal with them?
+    it might be possible to detect such a case and allocate the object on the heap,
+    replacing it with a fwd pointer. unfortunately that means we need a read 
+    barrier (ick) to handle forwarding pointers in arbitrary places
+  * but does that mean we need a fwd pointer to be live for awhile? do we need
+    a read barrier to get this to work? obviously we want to avoid a read barrier
+    at all costs.
+- what are the real costs of allowing forwarding pointers to exist outside of just
+  minor GC? assume each runtime primitive would need to be updated to handle the
+  case where the obj is a fwd pointer - is it just a matter of each function 
+  detecting this and (possibly) calling itself again with the 'real' address?
+  obviously that makes the runtime slower due to more checks, but maybe it is
+  not *so* bad?
+*/
+
+old note from runtime.c  (near minor gc section)
+ /* Overall GC notes:
+ note fwd pointers are only ever placed on the stack, never the heap
+ 
+ we now have 2 GC's:
+ - Stack GC, a minor collection where we move live stack objs to heap
+ - Heap GC, a major collection where we do mark&sweep
+
+ when replacing an object,
+ - only need to do this for objects on 'this' stack
+ - if object is a fwd pointer, return it's forwarding address
+ - otherwise, 
+   * allocate them on the heap
+   * return the new address
+   * leave a forwarding pointer on the stack with the new address
+ - may be able to modify transp macro to do this part
+
+ can still use write buffer to ensure any heap->stack references are handled
+ - also want to use this barrier to handle any globals that are re-assigned to 
+   locations on the stack, to ensure they are moved to the heap during GC.
+ - write barrier really should be per-stack, since OK to leave those items until
+   stack is collected
+ - TBD how this works with multiple threads, each with its own stack
+
+ need to transport:
+ - stack closure/args
+ - mutation write barrier
+ - globals
+
+ after transport is complete, we will not be scanning newspace but
+ do need to transport any stack objects referenced by the above
+ a couple of ideas:
+ - create a list of allocated objects, and pass over them in much
+   the same way the cheney algorithm does (2 "fingers"??). I think
+   this could actually just be a list of pointers since we want to
+   copy to the heap not the scan space. the goal is just to ensure
+   all live stack references are moved to the heap. trick here is to 
+   ensure scan space is large enough, although if it runs out
+   we can just allocate a new space (of say double the size), 
+   memcpy the old one, and update scanp/allocp accordingly.
+   * can use a bump pointer to build the list, so it should be
+     fairly efficient, especially if we don't have to resize too much
+   * will be writing all of this code from scratch, but can use
+     existing scan code as a guide
+ - or, during transport recursively transport objects that could
+   contain references (closures, lists, etc). This may be more
+   convenient to code, although it requires stack space to traverse
+   the structures. I think it might also get stuck processing circular
+   structures (!!!), so this approach is not an option
+ TBD how (or even if) this can scale to multiple threads...
+ is is possible to use write barrier(s) to detect if one thread is
+ working with another's data during GC? This will be an important
+ point to keep in mind as the code is being written
+
+!!!
+IMPORTANT - does the timing of GC matter? for example, if we GC before
+scanning all the stack space, there might be an object referenced by
+a live stack object that would get freed because we haven't gotten to
+it yet!
+
+so I think we have to scan all the stack space before doing a GC.
+alternatively, can we use a write barrier to keep track of when a
+stack object references one on the heap? that would effectively make
+the heap object into a root until stack GC
+
+Originally thought this, but now not so sure because it seems the above
+has to be taken into account:
+
+ Do not have to explicitly GC until heap is full enough for one to 
+ be initiated. do need to code gc_collect though, and ensure it is
+ called at the appropriate time.
+
+I think everything else will work as written, but not quite sure how
+to handle this detail yet. and it is very important to get right
+!!!!
+
+ thoughts:
+ - worth having a write barrier for globals? that is, only GC those that
+   were modified. just an idea...
+ - KEEP IN MIND AN OVERALL GOAL, that this should try to be as close as
+   possible to the cheney algorithm in terms of performance. so obviously we 
+   want to try and do as little work as necessary during each minor GC.
+   since we will use a write barrier to keep track of the heap's stack refs,
+   it seems reasonable that we could skip globals that live on the heap.
+ - To some extent, it should be possible to test changes that improve performance 
+   by coding something inefficient (but guaranteed to work) and then modifying it to
+   be more efficient (but not quite sure if idea will work).
+ */

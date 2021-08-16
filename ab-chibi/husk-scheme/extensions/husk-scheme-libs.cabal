@@ -1,0 +1,25 @@
+Name:                husk-scheme-libs
+Version:             0.0.1
+Synopsis:            Extra libraries for the husk-scheme platform.
+Description:         Extra libraries for the husk-scheme platform.
+License:             MIT
+License-file:        LICENSE
+Author:              Justin Ethier
+Maintainer:          Justin Ethier <github.com/justinethier>
+Homepage:            http://justinethier.github.com/husk-scheme
+Cabal-Version:       >= 1.10
+Build-Type:          Simple
+Category:            Compilers/Interpreters, Language
+Tested-with:         GHC == 7.2.2, GHC == 7.0.2, GHC == 6.12.3, GHC == 6.10.4
+
+Extra-Source-Files:  LICENSE
+
+Source-Repository head
+    Type:            git
+    Location:        git://github.com/justinethier/husk-scheme.git
+
+Library
+  Default-Language: Haskell2010
+  Build-Depends:   base >= 2.0 && < 5, array, containers, json, husk-scheme, mtl, transformers
+  Hs-Source-Dirs:  hs-src
+  Exposed-Modules: Language.Scheme.Plugins.JSON

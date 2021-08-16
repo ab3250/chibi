@@ -1,0 +1,35 @@
+Notes for implementing memory locations for variables
+
+right now variables are stored in a map, and looked up by name. The problem is that when a mutable variable (such as a list) is passed to a set! function, there is no way for that function to update the corresponding variable because it does not know where the list is stored.
+
+------------------
+
+we need a level of indirection so the object can refer back to the variable.
+
+The obvious solution is to generate a unique memory location for each variable (such as an integer for each, or a gensym) and use a map to store the actual variables, indexed by memory location. memory location would have to be stored with the variable
+
+could this map be part of the env? because if it is truly global then we need to perform garbage collection on it, which severly complicates the implementation.
+
+initial thoughts (there must be a better way):
+- heap as part of env (indexed by mem location)
+- memory location stored when var is created, if applicable
+  how to do when var used in a pure way???
+- define
+  if var has mem addy, assign it to var
+  add var to the heap
+- set!
+  same ops as above
+- var reference
+  if var refers to mem location, get it from the heap
+  may have to search parent env's
+this approach is not so bad (var creation aside), but does not have a garbage collection strategy for the heap
+
+-----------------------------
+here's a crazy idea - what if we use Stable Names http://hackage.haskell.org/packages/archive/base/4.5.1.0/doc/html/System-Mem-StableName.html
+
+basic idea is that when a mutator is called with a non-atomic value (such as a vector or list) as an argument, we generate a stable name for it. We then recursively search env's for a matching stable name. If we find it, then we store the result back in that place. 
+
+obviously the performance of this would be HORRIBLE. but it might work as a quick hack
+
+TBD: does this only work once? if you do this twice, will the second lookup fail? may need to hack stablename into huski as a primitive and just play around with it.  I think there will definitely be problems after a macro transformation, because the macro code will create new objects on the fly instead of passing the original one through. that should be fixed!
+

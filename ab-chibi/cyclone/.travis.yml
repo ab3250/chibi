@@ -1,0 +1,73 @@
+language: c
+#sudo: required
+matrix:
+  include:
+    - os: linux
+      compiler: gcc
+      arch: amd64
+      addons:
+        apt:
+          packages:
+            - libtommath-dev
+    - os: linux
+      compiler: clang
+      arch: amd64
+      addons:
+        apt:
+          packages:
+            - libtommath-dev
+            - clang-3.9
+    - os: linux
+      compiler: gcc
+      arch: arm64
+      addons:
+        apt:
+          packages:
+            - libtommath-dev
+    - os: freebsd
+      addons:
+        pkg:
+          packages:
+            - sudo
+            - gmake
+            - libtommath
+            - concurrencykit
+notifications:
+  email: false
+before_install:
+  - |
+      if [ "$(uname)" != "FreeBSD" ]; then
+        sudo ln -s /usr/bin/make /usr/bin/gmake
+      fi
+  - |
+      git clone https://github.com/concurrencykit/ck.git ${HOME}/ck
+      cd ${HOME}/ck
+      git checkout 0.6.0
+      ./configure PREFIX=/usr
+      gmake all
+      if [ "$(uname)" != "FreeBSD" ]; then
+        sudo gmake install
+      else
+        gmake install
+      fi
+      if [ "$(uname)" = "Linux" ]; then
+        sudo ldconfig
+      fi
+  - |
+      git clone https://github.com/justinethier/cyclone-bootstrap.git ${HOME}/cyclone-bootstrap
+      cd ${HOME}/cyclone-bootstrap
+      gmake
+      if [ "$(uname)" != "FreeBSD" ]; then
+        sudo gmake install
+      # else
+      # #gmake install
+      fi
+script:
+  - gmake
+  - |
+      if [ "$(uname)" != "FreeBSD" ]; then
+        sudo gmake install
+        gmake test
+      # else
+      #  # Can't do anything, TravisCI FreeBSD errors out doing sudo
+      fi

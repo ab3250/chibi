@@ -1,0 +1,203 @@
+GNU Mcron NEWS                                    -*- outline -*-
+
+* Noteworthy changes in release 1.2.1 (2021-08-05) [stable]
+
+** Improvements
+  Fixed "mcron --help" to show --stdin does not apply to files.
+  Updated to latest autoconf.
+  Changes in strings to reflect GNU Mcron and not just mcron.
+
+* Noteworthy changes in release 1.2.0 (2020-04-22) [stable]
+
+** Improvements
+  C code removed, mcron becomes 100% Guile.
+  Make doc/mcron.texi gender neutral.
+  Have src/mcron/scripts/mcron.scm (process-user-file): use read and eval
+    instead of load.
+  New tests added for extra checks.
+
+* Noteworthy changes in release 1.1.4 (2020-04-12) [stable]
+
+** Improvements
+  Added missing #include directives
+  Support Guile 3.0
+  Call 'child-cleanup' when 'select' returns an empty set
+  Avoid 'call-with-current-continuation'
+  Date changes for Copyrights changed for 2020
+  Email updates in documentation
+
+* Noteworthy changes in release 1.1.3 (2019-11-17) [stable]
+
+** Improvements
+  Package contains configure script by default
+  Authors file change (addition)
+  Doc fix for 'every second sunday'
+  guix.scm update
+
+* Noteworthy changes in release 1.1.2 (2018-11-26) [stable]
+
+** Improvements
+
+  The "--with-sendmail" configure variable has been added to allow the usage
+  of a different Mail Transfert Agent (MTA) than 'sendmail -t'.  The MTA must
+  be able to guess the actual recipients from the 'To:' message header.
+
+* Noteworthy changes in release 1.1.1 (2018-04-08) [stable]
+
+** Bug fixes
+
+  The "--disable-multi-user" configure variable is not reversed anymore.
+  'cron' and 'crontab' are now installed unless this option is used.
+
+  The programs now sets the GUILE_LOAD_PATH and GUILE_LOAD_COMPILED_PATH
+  environment variables with the location of the installed Guile modules.
+
+  'next-year-from', 'next-year', 'next-month-from', 'next-month',
+  'next-day-from', 'next-day', 'next-hour-from', 'next-hour',
+  'next-minute-from', 'next-minute', 'next-second-from', and 'next-second' no
+  longer crashes when passing an optional argument.
+  [bug introduced in mcron-1.1]
+
+** Improvements
+
+  Some basic tests for the installed programs can be run after 'make install'
+  with 'make installcheck'.
+
+  The configuration files are now processed using a deterministic order.
+
+  The test suite code coverage for mcron modules is now at 66.8% in term of
+  number of lines (mcron-1.1 was at 23.7%).
+
+* Noteworthy changes in release 1.1 (2018-03-19) [stable]
+
+** New features
+
+  The 'job' procedure has now a '#:user' keyword argument which allows
+  specifying a different user that will run it.
+
+  Additional man pages for 'cron(8)' and 'crontab(1)' are now generated using
+  GNU Help2man.
+
+** Bug fixes
+
+  Child process created when executing a job are now properly cleaned even
+  when execution fails by using 'dynamic-wind' construct.
+
+** Improvements
+
+  GNU Guile 2.2 is now supported.
+
+  Some procedures are now written using functional style and include a
+  docstring.  'def-macro' usages are now replaced with hygienic macros.
+
+  Compilation is now done using a non-recursive Makefile, supports out of tree
+  builds, and use silent rules by default.
+
+  Guile object files creation don't rely on auto-compilation anymore and are
+  installed in 'site-ccache' directory.
+
+  Jobs are now internally represented using SRFI-9 records instead of vectors.
+
+  Changelog are generated from Git logs when generating the tarball using
+  Gnulib gitlog-to-changelog script.
+
+  A test suite is now available and can be run with 'make check'.
+
+** Changes in behavior
+
+  The "--enable-debug" configure variable has been removed and replaced with
+  MCRON_DEBUG environment variable.
+
+  The "--disable-multi-user" configure variable is now used to not build and
+  install the 'cron' and 'crontab' programs.  It has replaced the
+  "--enable-no-vixie-clobber" which had similar effect.
+
+  (mcron core) module is now deprecated and has been superseeded by
+  (mcron base).
+
+* Noteworthy changes in release 1.0.8 (2014-04-28) [stable]
+
+  Man page is now generated with GNU Help2man before installation and
+  distributed in the tarball.
+
+* Noteworthy changes in release 1.0.7 (2012-02-04) [stable]
+
+  Mcron is now compatible with Guile 2.0.
+
+  FreeDesktop.org's standard user configuration directories are now used to
+  find the user script files.
+
+* Noteworthy changes in release 1.0.6 (2010-06-20) [stable]
+
+  The copyright notices are now standardized on all auxiliary files. This
+  follows the example set by the GNU hello program.
+
+  immutable end texts from the texinfo document are now removed, to
+  accomodate with Debian requirements.
+
+* Noteworthy changes in release 1.0.5 (2010-06-13) [stable]
+
+  Some technical changes to the build system has been made to help the
+  distribution to Debian.
+
+  The Git repository has been completely re-hashed, and now represents a
+  complete and faithful history of the package's development since its
+  inception.
+
+* Noteworthy changes in release 1.0.4 (2008-02-21) [stable]
+
+  The source code is now held in a Git repository, which can be checked-out at
+  <git://git.savannah.gnu.org/mcron.git>.
+
+  The code is now covered by the GPLv3 license.
+
+* Noteworthy changes in release 1.0.3 (2006-04-16) [stable]
+
+  daylight savings time shifts are now properly handled
+
+  Parsing Vixie-style input files has been improved.
+
+  Crontab entries can now be corrected instead of just wiping out the file.
+
+  Mcron is now compatible with Guile 1.8.
+
+  The manual is now licensed under the GNU Free Documentation License (GFDL)
+
+* Noteworthy changes in release 1.0.2 (2006-01-02) [stable]
+
+* Noteworthy changes in release 1.0.1 (2004-05-15) [stable]
+
+  The mailing list <bug-mcron@gnu.org> has been set-up.
+
+* Noteworthy changes in release 1.0 (2003-12-12) [stable]
+
+  Mcron is now officially a GNU program.
+
+* Noteworthy changes in release 0.99.3 (2003-08-05) [stable]
+
+  The code is now splitted into modules.
+
+* Noteworthy changes in release 0.99.2 (2003-07-20) [stable]
+
+  The implementation is now really 100% Vixie compatible.
+
+  Some Guile limitations such as the absence of POSIX threads and signals has
+  been worked around.
+
+* Noteworthy changes in release 0.99.1 (2003-07-05) [stable]
+
+  Installation of cron and crontab is now disabled by default (suspect problems
+  with Guile internals are preventing these from working properly).
+
+  The project is now managed on Savannah.  A CVS repository and web page have been
+  created.
+
+========================================================================
+
+Copyright © 2003, 2005, 2006 Dale Mellor <dale_mellor@users.sourceforge.net>
+Copyright © 2017, 2018 Mathieu Lirzin <mthl@gnu.org>
+Copyright © 2018 宋文武 <iyzsong@member.fsf.org>
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
