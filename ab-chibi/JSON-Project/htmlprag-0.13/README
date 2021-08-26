@@ -1,0 +1,53 @@
+-*- Outline -*-
+
+This directory contains a prepackaged version of HtmlPrag version 0.13
+for Scsh, the Scheme Shell (http://www.scsh.net).
+
+For more information on HtmlPrag visit
+
+   http://www.neilvandyke.org/htmlprag/
+
+This library can also be used with Scheme 48.
+
+* Installation and Usage
+
+** Scsh
+
+To install this package I recommend the Scsh Installation Library,
+available from
+
+   http://lamp.epfl.ch/~schinz/scsh_packages/
+
+I used version 1.1.2.
+
+Running the installation script (scsh-install-pkg) in this directory
+will install the library.
+
+To use the library just start Scsh with the options
+
+   -lel htmlprag/load.scm -o htmlprag
+
+** Scheme 48
+
+Copy the files "htmlprag.scm" and "packages.scm" to some directory.
+At the Scheme 48 prompt type
+
+   ,config ,load /path/to/packages.scm
+
+followed by
+
+   ,open htmlprag
+
+Alternatively you might want to dump a new image with HtmlPrag
+preloaded.  See the Scheme 48 documentation for details.
+
+* Authors
+
+HtmlPrag was written by Neil W. Van Dyke.
+
+Packaging for Scheme 48 / Scsh ("packages.scm", "pkg-def.scm") was
+done by Emilio Lopes <eclig@gmx.net>.
+
+* License
+
+The license for HtmlPrag can be found in the file "COPYING".

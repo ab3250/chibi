@@ -1,0 +1,9 @@
+#! /bin/sh
+
+set -ex
+
+"$@" ./test_all_opts --help
+"$@" ./test_all_opts --version
+"$@" ./test_all_opts -r "foo" --opt-arg -o
+"$@" ./test_all_opts -r "foo" --opt-arg="bar" -o"foobar"
+"$@" ./test_all_opts -r "foo" -H10

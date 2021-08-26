@@ -1,0 +1,1 @@
+check random in knuth-shuffle
